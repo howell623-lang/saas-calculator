@@ -1,0 +1,48 @@
+name: Daily Tool Generation
+
+on:
+  schedule:
+    - cron: "0 2 * * *" # daily at 02:00 UTC
+  workflow_dispatch:
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Install deps for generator
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install google-generativeai
+
+      - name: Generate tools (daily cap)
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          MAX_PER_DAY: 50
+          TOPICS_FILE: scripts/topics.txt
+        run: |
+          bash scripts/run_daily.sh
+
+      - name: Commit and push changes
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.name "automation-bot"
+          git config user.email "automation-bot@users.noreply.github.com"
+          if [[ -n "$(git status --porcelain)" ]]; then
+            git add data/tools data/tool_generation_log.csv
+            git commit -m "chore: daily generated tools [skip ci]" || true
+            git push
+          else
+            echo "No changes to commit."
+          fi
