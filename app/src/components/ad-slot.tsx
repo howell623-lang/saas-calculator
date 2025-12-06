@@ -21,7 +21,7 @@ let adsScriptInjected = false;
 
 export function AdSlot({ slotName = "global", note }: Props) {
   const { adsEnabled } = useAds();
-  const adRef = useRef<HTMLDivElement | null>(null);
+  const adRef = useRef<HTMLModElement | null>(null);
 
   useEffect(() => {
     if (!adsEnabled) return;
