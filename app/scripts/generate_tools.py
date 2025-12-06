@@ -6,7 +6,10 @@ Usage (single):
   python scripts/generate_tools.py --topic "cat age converter" --slug cat-age --force
 
 Usage (batch from file, 1 topic per line):
-  python scripts/generate_tools.py --topics-file scripts/topics.txt --max-per-day 50 --shuffle
+  python scripts/generate_tools.py --topics-file scripts/topics.txt --max-per-day 20 --shuffle
+
+Usage (strategy mode - let Gemini pick niches and formulas):
+  python scripts/generate_tools.py --strategy --plan-count 20 --max-per-day 20
 
 Notes:
 - Install google-generativeai and set GEMINI_API_KEY to use Gemini; otherwise use --mock.
@@ -135,7 +138,13 @@ def generate_with_gemini(topic: str, api_key: str) -> ToolConfig:
 Return only valid JSON with fields: slug, title, seo{{title,description}}, summary,
 inputs[id,label,type(number|text),placeholder,required,step?], outputs[id,label,unit?,precision?],
 formula (JavaScript body returning an object), cta, faq(list of {{q,a}}), tags(list of strings).
-Slug must be URL-safe."""
+Constraints for usefulness (avoid trivial multiplier calculators):
+- 3-8 inputs, at least 2 outputs. Use realistic domain units and steps.
+- Include validation hints in placeholders/labels (e.g., ranges, units).
+- Formula must include multiple operations (not just single multiply/divide), e.g., ratios, exponent, conditionals (ternary) or piecewise logic.
+- Prefer domain-specific structure (e.g., HVAC BTU, mortgage, dosage mg/kg with caps, solar geometry, brewing gravities).
+- FAQ must include at least 2 helpful items.
+- Slug must be URL-safe (lowercase, hyphenated)."""
   model = genai.GenerativeModel("gemini-1.5-flash")
   response = model.generate_content(prompt)
   payload = response.text or "{}"
@@ -154,6 +163,34 @@ Slug must be URL-safe."""
       faq=data.get("faq"),
       tags=data.get("tags"),
   )
+
+
+def plan_topics_with_gemini(api_key: str, plan_count: int, niches: str) -> List[str]:
+  try:
+    import google.generativeai as genai  # type: ignore
+  except ImportError:
+    raise RuntimeError(
+        "google-generativeai is not installed. Run `pip install google-generativeai`."
+    )
+
+  genai.configure(api_key=api_key)
+  prompt = f"""Act as a market research agent for calculator tools.
+First, list 10 niche micro-tool markets where Google AdSense CPC is high but search competition is low.
+Then, pick ONE best domain among these: {niches}.
+For the chosen domain, return a JSON array of {plan_count} calculator ideas (short slugs/titles), focusing on high-need formulas (not trivial multipliers).
+Format strictly as JSON array of strings, no extra text."""
+  model = genai.GenerativeModel("gemini-1.5-flash")
+  response = model.generate_content(prompt)
+  text = response.text or "[]"
+  try:
+    topics = json.loads(text)
+    if not isinstance(topics, list):
+      raise ValueError("Plan result is not a list")
+    topics = [str(t) for t in topics][:plan_count]
+    return topics
+  except Exception:
+    print("Warning: could not parse strategy plan JSON, got:", text[:200])
+    return []
 
 
 def validate(config: ToolConfig) -> None:
@@ -223,8 +260,8 @@ def main(argv: list[str] | None = None) -> int:
   parser.add_argument(
       "--max-per-day",
       type=int,
-      default=50,
-      help="Max items to generate in this run (batch mode).",
+      default=20,
+      help="Max items to generate in this run (batch or strategy).",
   )
   parser.add_argument(
       "--log",
@@ -236,10 +273,27 @@ def main(argv: list[str] | None = None) -> int:
       action="store_true",
       help="Shuffle topics in batch mode to vary daily generation.",
   )
+  parser.add_argument(
+      "--strategy",
+      action="store_true",
+      help="Let Gemini plan niches and formulas; requires GEMINI_API_KEY.",
+  )
+  parser.add_argument(
+      "--plan-count",
+      type=int,
+      default=20,
+      help="How many topics to request in strategy mode.",
+  )
+  parser.add_argument(
+      "--niches",
+      type=str,
+      default="gardening, finance, health",
+      help="Comma-separated niches to bias strategy selection.",
+  )
   args = parser.parse_args(argv)
 
-  if not args.topic and not args.topics_file:
-    parser.error("Provide --topic or --topics-file")
+  if not args.topic and not args.topics_file and not args.strategy:
+    parser.error("Provide --topic or --topics-file or --strategy")
 
   api_key = os.environ.get("GEMINI_API_KEY")
 
@@ -264,21 +318,30 @@ def main(argv: list[str] | None = None) -> int:
     )
     return path
 
-  if args.topics_file:
+  topics: List[str] = []
+  if args.strategy:
+    if not api_key:
+      raise RuntimeError("Strategy mode requires GEMINI_API_KEY")
+    topics = plan_topics_with_gemini(api_key, args.plan_count, args.niches)
+    if args.shuffle:
+      random.shuffle(topics)
+    print(f"Planned {len(topics)} topics via strategy.")
+  elif args.topics_file:
     topics = list(iter_topics_from_file(args.topics_file))
     if args.shuffle:
       random.shuffle(topics)
-    generated = 0
-    for topic in topics:
-      if generated >= args.max_per_day:
-        print(f"Reached daily cap ({args.max_per_day}), stopping.")
-        break
-      path = build_and_save(topic)
-      if path:
-        generated += 1
-    print(f"Batch complete. Generated: {generated}/{len(topics)} (cap {args.max_per_day}).")
-  else:
-    build_and_save(args.topic)  # type: ignore[arg-type]
+  elif args.topic:
+    topics = [args.topic]
+
+  generated = 0
+  for topic in topics:
+    if generated >= args.max_per_day:
+      print(f"Reached daily cap ({args.max_per_day}), stopping.")
+      break
+    path = build_and_save(topic)
+    if path:
+      generated += 1
+  print(f"Complete. Generated: {generated}/{len(topics)} (cap {args.max_per_day}).")
 
   return 0
 
