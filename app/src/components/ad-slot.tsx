@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 import { useAds } from "./ads-context";
 
 const ADS_CLIENT = "ca-pub-1856020780538432";
-const ADS_SLOT = "2854601889";
+const ADS_SLOT = "4228883995";
 
 type Props = {
   slotName?: string;
