@@ -23,6 +23,22 @@ const isOutputField = (value: unknown): value is OutputField => {
   return isString(candidate.id) && isString(candidate.label);
 };
 
+const mapArticle = (value: unknown) => {
+  if (!Array.isArray(value)) return undefined;
+  return value
+    .filter(
+      (item) =>
+        item &&
+        typeof item === "object" &&
+        isString((item as Record<string, unknown>).heading) &&
+        isString((item as Record<string, unknown>).body)
+    )
+    .map((item) => ({
+      heading: (item as Record<string, unknown>).heading as string,
+      body: (item as Record<string, unknown>).body as string,
+    }));
+};
+
 const assertToolConfig = (value: unknown, slug: string): ToolConfig => {
   if (!value || typeof value !== "object") {
     throw new Error(`Invalid tool config for "${slug}"`);
@@ -75,6 +91,10 @@ const assertToolConfig = (value: unknown, slug: string): ToolConfig => {
     tags: Array.isArray(candidate.tags)
       ? (candidate.tags as unknown[]).filter(isString)
       : undefined,
+    related: Array.isArray(candidate.related)
+      ? (candidate.related as unknown[]).filter(isString)
+      : undefined,
+    article: mapArticle(candidate.article),
   };
 };
 

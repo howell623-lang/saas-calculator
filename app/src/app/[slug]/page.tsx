@@ -38,6 +38,11 @@ export async function generateMetadata(
 const getRelatedTools = (current: ToolConfig) => {
   const pool = loadAllToolConfigs().filter((tool) => tool.slug !== current.slug);
   if (pool.length === 0) return [];
+  if (current.related?.length) {
+    const set = new Set(current.related);
+    const explicit = pool.filter((tool) => set.has(tool.slug));
+    if (explicit.length) return explicit.slice(0, 5);
+  }
   if (!current.tags?.length) return pool.slice(0, 3);
   const tagSet = new Set(current.tags);
   const tagged = pool.filter((tool) =>
@@ -156,6 +161,24 @@ export default async function ToolPage({ params }: PageProps) {
                   <p className="mt-2 text-xs text-gray-600">{item.summary}</p>
                 ) : null}
               </Link>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      {tool.article?.length ? (
+        <section className="space-y-6 rounded-3xl bg-white/80 p-8 shadow-lg shadow-gray-200/60 ring-1 ring-gray-100 backdrop-blur-sm">
+          <h2 className="text-xl font-semibold text-gray-900">Learn more</h2>
+          <div className="space-y-4">
+            {tool.article.map((section) => (
+              <div key={section.heading} className="space-y-2">
+                <h3 className="text-lg font-semibold text-gray-900">
+                  {section.heading}
+                </h3>
+                <p className="text-sm leading-6 text-gray-700 whitespace-pre-wrap">
+                  {section.body}
+                </p>
+              </div>
             ))}
           </div>
         </section>

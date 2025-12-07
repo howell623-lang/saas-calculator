@@ -33,6 +33,7 @@ from typing import Any, Dict, Iterable, List
 ROOT = Path(__file__).resolve().parents[1]
 TOOLS_DIR = ROOT / "data" / "tools"
 LOG_FILE = ROOT / "data" / "tool_generation_log.csv"
+MODEL_NAME = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
 
 
 @dataclass
@@ -137,15 +138,17 @@ def generate_with_gemini(topic: str, api_key: str) -> ToolConfig:
   prompt = f"""You are generating a JSON config for a calculator about "{topic}".
 Return only valid JSON with fields: slug, title, seo{{title,description}}, summary,
 inputs[id,label,type(number|text),placeholder,required,step?], outputs[id,label,unit?,precision?],
-formula (JavaScript body returning an object), cta, faq(list of {{q,a}}), tags(list of strings).
+formula (JavaScript body returning an object), cta, faq(list of {{q,a}}), tags(list of strings),
+related(slugs of similar tools), article(list of sections with heading, body).
 Constraints for usefulness (avoid trivial multiplier calculators):
 - 3-8 inputs, at least 2 outputs. Use realistic domain units and steps.
 - Include validation hints in placeholders/labels (e.g., ranges, units).
 - Formula must include multiple operations (not just single multiply/divide), e.g., ratios, exponent, conditionals (ternary) or piecewise logic.
 - Prefer domain-specific structure (e.g., HVAC BTU, mortgage, dosage mg/kg with caps, solar geometry, brewing gravities).
-- FAQ must include at least 2 helpful items.
+- FAQ must include at least 5-8 helpful items.
+- Generate a long-form article (~800 words) with sections: "Why use this [tool]?", "How the calculation works", "Common mistakes in [niche]". Provide content in 'article'.
 - Slug must be URL-safe (lowercase, hyphenated)."""
-  model = genai.GenerativeModel("gemini-1.5-flash")
+  model = genai.GenerativeModel(MODEL_NAME)
   response = model.generate_content(prompt)
   payload = response.text or "{}"
   data = json.loads(payload)
@@ -179,7 +182,7 @@ First, list 10 niche micro-tool markets where Google AdSense CPC is high but sea
 Then, pick ONE best domain among these: {niches}.
 For the chosen domain, return a JSON array of {plan_count} calculator ideas (short slugs/titles), focusing on high-need formulas (not trivial multipliers).
 Format strictly as JSON array of strings, no extra text."""
-  model = genai.GenerativeModel("gemini-1.5-flash")
+  model = genai.GenerativeModel(MODEL_NAME)
   response = model.generate_content(prompt)
   text = response.text or "[]"
   try:

@@ -30,6 +30,8 @@ export type ToolConfig = {
   cta?: string;
   faq?: { q: string; a: string }[];
   tags?: string[];
+  related?: string[];
+  article?: { heading: string; body: string }[];
 };
 
 export type ToolResult = Record<string, number | string>;
