@@ -20,6 +20,19 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, Iterable, List
 
+# ---- compat for Python < 3.10 (packages_distributions) ----
+try:
+    from importlib.metadata import packages_distributions as _pd  # type: ignore
+except Exception:
+    try:
+        import importlib_metadata  # type: ignore
+        import importlib.metadata as _ilm  # type: ignore
+
+        if not hasattr(_ilm, "packages_distributions"):
+            _ilm.packages_distributions = importlib_metadata.packages_distributions  # type: ignore
+    except Exception:
+        pass
+
 try:
     import google.generativeai as genai  # type: ignore
 
@@ -118,19 +131,34 @@ def plan_topics_with_gemini(api_key: str, plan_count: int, niches: str) -> List[
     prompt = f"""Act as a market research agent for calculator tools.
 First, list 10 niche micro-tool markets where Google AdSense CPC is high but search competition is low.
 Then, pick ONE best domain among these: {niches}.
-For the chosen domain, return a JSON array of {plan_count} calculator ideas (short slugs/titles), focusing on high-need formulas (not trivial multipliers).
-Format strictly as JSON array of strings, no extra text."""
+Now RETURN ONLY JSON ARRAY (no prose) of {plan_count} calculator ideas (short slugs/titles), focusing on high-need formulas (not trivial multipliers).
+Example: ["solar-array-sizing","heat-loss-room","duct-static-pressure"]
+JSON only, nothing else."""
     model = genai.GenerativeModel(MODEL_NAME)
-    response = model.generate_content(prompt)
+    try:
+        response = model.generate_content(prompt, request_options={"timeout": 60})
+    except Exception as e:
+        print("Strategy generation failed:", e)
+        return []
     text = response.text or "[]"
     try:
-        topics = json.loads(text)
+        cleaned = re.sub(r"```json\s*", "", text, flags=re.IGNORECASE)
+        cleaned = re.sub(r"```", "", cleaned)
+        topics = json.loads(cleaned)
         if not isinstance(topics, list):
             raise ValueError("Plan result is not a list")
         return [sanitize_slug(str(t)) for t in topics][:plan_count]
     except Exception:
+        # fallback: extract bullet/line items
+        lines = [
+            sanitize_slug(m.group(1))
+            for m in re.finditer(r"^[\-\*\d\.\)]\s*(.+)$", text, flags=re.MULTILINE)
+            if m.group(1)
+        ]
+        if lines:
+            return lines[:plan_count]
         print("Warning: could not parse strategy plan JSON, got:", text[:200])
-        return []
+    return []
 
 
 def generate_with_gemini(topic: str, api_key: str) -> ToolConfig | None:
@@ -155,7 +183,11 @@ Constraints:
 - Slug must be URL-safe (lowercase, hyphenated).
 Respond with JSON only."""
     model = genai.GenerativeModel(MODEL_NAME)
-    response = model.generate_content(prompt)
+    try:
+        response = model.generate_content(prompt, request_options={"timeout": 120})
+    except Exception as e:
+        print(f"❌ Generation failed for {topic}:", e)
+        return None
     data = clean_json(response.text)
     if not data:
         return None
@@ -272,11 +304,11 @@ def main(argv: List[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Generate tool JSON configs.")
     parser.add_argument("--topic", help="Single domain or calculator idea.")
     parser.add_argument("--topics-file", type=Path, help="Path to a file with one topic per line.")
-    parser.add_argument("--max-per-day", type=int, default=20, help="Max items to generate.")
+    parser.add_argument("--max-per-day", type=int, default=10, help="Max items to generate.")
     parser.add_argument("--log", action="store_true", help="Append CSV log.")
     parser.add_argument("--shuffle", action="store_true", help="Shuffle topics.")
     parser.add_argument("--strategy", action="store_true", help="Use strategy planning via Gemini.")
-    parser.add_argument("--plan-count", type=int, default=20, help="Topics to request in strategy.")
+    parser.add_argument("--plan-count", type=int, default=10, help="Topics to request in strategy.")
     parser.add_argument("--niches", type=str, default="gardening, finance, health", help="Comma-separated niches.")
     parser.add_argument("--force", action="store_true", help="Overwrite existing file if exists.")
     parser.add_argument("--mock", action="store_true", help="Force mock mode (no API calls).")
@@ -300,6 +332,13 @@ def main(argv: List[str] | None = None) -> int:
         topics = list(iter_topics_from_file(args.topics_file))
         if args.shuffle:
             random.shuffle(topics)
+    if not topics:
+        # env TOPICS_FILE fallback
+        env_topics = os.environ.get("TOPICS_FILE")
+        if env_topics and Path(env_topics).exists():
+            topics = list(iter_topics_from_file(Path(env_topics)))
+            if args.shuffle:
+                random.shuffle(topics)
     if not topics and args.topic:
         topics = [args.topic]
 
@@ -311,7 +350,11 @@ def main(argv: List[str] | None = None) -> int:
         slug = sanitize_slug(args.slug or topic)
         tool: ToolConfig | None = None
         if not use_mock:
-            tool = generate_with_gemini(topic, api_key)  # type: ignore[arg-type]
+            try:
+                tool = generate_with_gemini(topic, api_key)  # type: ignore[arg-type]
+            except Exception as e:
+                print(f"❌ Error on {topic}: {e}")
+                tool = None
         if not tool:
             tool = generate_offline_tool(slug)
         # ensure slug matches filename
