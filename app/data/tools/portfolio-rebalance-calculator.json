@@ -1,0 +1,193 @@
+{
+  "slug": "portfolio-rebalance-calculator",
+  "title": "Portfolio Rebalance Calculator",
+  "seo": {
+    "title": "Portfolio Rebalance Calculator - Optimize Asset Allocation",
+    "description": "Ensure your investment portfolio stays aligned with your financial goals and risk tolerance. Calculate exactly what to buy or sell for each asset class to rebalance efficiently."
+  },
+  "inputs": [
+    {
+      "id": "current_total_portfolio_value",
+      "label": "Current Total Portfolio Value",
+      "type": "number",
+      "placeholder": "e.g., 100000",
+      "required": true,
+      "step": 100
+    },
+    {
+      "id": "target_stocks_percentage",
+      "label": "Target Stocks (%)",
+      "type": "number",
+      "placeholder": "e.g., 60",
+      "required": true,
+      "step": 0.1
+    },
+    {
+      "id": "current_stocks_value",
+      "label": "Current Stocks Value",
+      "type": "number",
+      "placeholder": "e.g., 70000",
+      "required": true,
+      "step": 100
+    },
+    {
+      "id": "target_bonds_percentage",
+      "label": "Target Bonds (%)",
+      "type": "number",
+      "placeholder": "e.g., 30",
+      "required": true,
+      "step": 0.1
+    },
+    {
+      "id": "current_bonds_value",
+      "label": "Current Bonds Value",
+      "type": "number",
+      "placeholder": "e.g., 25000",
+      "required": true,
+      "step": 100
+    },
+    {
+      "id": "target_cash_percentage",
+      "label": "Target Cash (%)",
+      "type": "number",
+      "placeholder": "e.g., 10",
+      "required": true,
+      "step": 0.1
+    },
+    {
+      "id": "current_cash_value",
+      "label": "Current Cash Value",
+      "type": "number",
+      "placeholder": "e.g., 5000",
+      "required": true,
+      "step": 10
+    },
+    {
+      "id": "transaction_cost_percentage",
+      "label": "Estimated Transaction Cost (%)",
+      "type": "number",
+      "placeholder": "e.g., 0.1 (for 0.1%)",
+      "required": false,
+      "step": 0.01
+    },
+    {
+      "id": "rebalance_threshold_percentage",
+      "label": "Rebalance Threshold (%)",
+      "type": "number",
+      "placeholder": "e.g., 5 (rebalance if % deviates by >5%)",
+      "required": false,
+      "step": 0.1
+    }
+  ],
+  "outputs": [
+    {
+      "id": "rebalance_stocks_action",
+      "label": "Stocks Rebalance Action"
+    },
+    {
+      "id": "rebalance_stocks_amount",
+      "label": "Stocks Amount",
+      "unit": "$",
+      "precision": 2
+    },
+    {
+      "id": "rebalance_bonds_action",
+      "label": "Bonds Rebalance Action"
+    },
+    {
+      "id": "rebalance_bonds_amount",
+      "label": "Bonds Amount",
+      "unit": "$",
+      "precision": 2
+    },
+    {
+      "id": "rebalance_cash_action",
+      "label": "Cash Rebalance Action"
+    },
+    {
+      "id": "rebalance_cash_amount",
+      "label": "Cash Amount",
+      "unit": "$",
+      "precision": 2
+    },
+    {
+      "id": "estimated_transaction_cost",
+      "label": "Estimated Transaction Cost",
+      "unit": "$",
+      "precision": 2
+    },
+    {
+      "id": "total_rebalanced_value",
+      "label": "Total Value Adjusted",
+      "unit": "$",
+      "precision": 2
+    },
+    {
+      "id": "total_portfolio_value_after_costs",
+      "label": "Portfolio Value After Costs",
+      "unit": "$",
+      "precision": 2
+    }
+  ],
+  "formula": "const totalCurrentValue = inputs.current_total_portfolio_value;\nconst targetStocksPct = inputs.target_stocks_percentage / 100;\nconst targetBondsPct = inputs.target_bonds_percentage / 100;\nconst targetCashPct = inputs.target_cash_percentage / 100;\nconst transactionCostRate = inputs.transaction_cost_percentage ? inputs.transaction_cost_percentage / 100 : 0;\nconst rebalanceThresholdPct = inputs.rebalance_threshold_percentage ? inputs.rebalance_threshold_percentage / 100 : 0.01; // Default to 1% threshold if not provided\n\nconst targetStocksValue = totalCurrentValue * targetStocksPct;\nconst targetBondsValue = totalCurrentValue * targetBondsPct;\nconst targetCashValue = totalCurrentValue * targetCashPct;\n\nconst currentStocksPct = inputs.current_stocks_value / totalCurrentValue;\nconst currentBondsPct = inputs.current_bonds_value / totalCurrentValue;\nconst currentCashPct = inputs.current_cash_value / totalCurrentValue;\n\nlet stocksAction = 'Hold';\nlet stocksAmount = 0;\nlet bondsAction = 'Hold';\nlet bondsAmount = 0;\nlet cashAction = 'Hold';\nlet cashAmount = 0;\n\nlet estimatedTransactionCost = 0;\nlet totalRebalancedValue = 0; // Sum of absolute amounts transacted\n\n// Stocks rebalance logic\nif (Math.abs(currentStocksPct - targetStocksPct) > rebalanceThresholdPct) {\n    stocksAmount = Math.abs(targetStocksValue - inputs.current_stocks_value);\n    stocksAction = (targetStocksValue > inputs.current_stocks_value) ? 'Buy' : 'Sell';\n    estimatedTransactionCost += stocksAmount * transactionCostRate;\n    totalRebalancedValue += stocksAmount;\n}\n\n// Bonds rebalance logic\nif (Math.abs(currentBondsPct - targetBondsPct) > rebalanceThresholdPct) {\n    bondsAmount = Math.abs(targetBondsValue - inputs.current_bonds_value);\n    bondsAction = (targetBondsValue > inputs.current_bonds_value) ? 'Buy' : 'Sell';\n    estimatedTransactionCost += bondsAmount * transactionCostRate;\n    totalRebalancedValue += bondsAmount;\n}\n\n// Cash rebalance logic\n// Note: Cash rebalance often occurs as a result of stock/bond rebalancing, but we calculate its direct deviation.\nif (Math.abs(currentCashPct - targetCashPct) > rebalanceThresholdPct) {\n    cashAmount = Math.abs(targetCashValue - inputs.current_cash_value);\n    cashAction = (targetCashValue > inputs.current_cash_value) ? 'Increase Holding' : 'Decrease Holding'; // Use more descriptive terms for cash\n    // Usually no direct transaction cost for moving cash, unless it's conversion, but we track the movement.\n    totalRebalancedValue += cashAmount;\n}\n\nconst totalPortfolioValueAfterCosts = totalCurrentValue - estimatedTransactionCost;\n\nreturn {\n    rebalance_stocks_action: stocksAction,\n    rebalance_stocks_amount: stocksAmount,\n    rebalance_bonds_action: bondsAction,\n    rebalance_bonds_amount: bondsAmount,\n    rebalance_cash_action: cashAction,\n    rebalance_cash_amount: cashAmount,\n    estimated_transaction_cost: estimatedTransactionCost,\n    total_rebalanced_value: totalRebalancedValue,\n    total_portfolio_value_after_costs: totalPortfolioValueAfterCosts\n};\n",
+  "summary": "This calculator helps you determine the precise buy or sell actions needed to bring your investment portfolio back to your target asset allocation. Input your current holdings, desired percentages for stocks, bonds, and cash, and any rebalance thresholds or transaction costs, and get a clear plan of action.",
+  "cta": "Calculate Rebalance",
+  "faq": [
+    {
+      "q": "What is portfolio rebalancing?",
+      "a": "Portfolio rebalancing is the process of realigning the weightings of a portfolio's assets. As market conditions change, some assets may grow faster than others, causing your portfolio's original allocation to drift. Rebalancing involves selling appreciated assets and buying underperforming ones to restore your desired asset mix."
+    },
+    {
+      "q": "Why is rebalancing important for my investments?",
+      "a": "Rebalancing is crucial for maintaining your desired risk level and staying aligned with your long-term financial goals. Without it, your portfolio can become overweighted in higher-performing (and potentially riskier) assets, exposing you to more risk than you're comfortable with. It also encourages a 'buy low, sell high' discipline."
+    },
+    {
+      "q": "How often should I rebalance my portfolio?",
+      "a": "There are two main approaches: time-based (e.g., annually, semi-annually) or threshold-based. Threshold-based rebalancing, which this calculator supports, means you only rebalance when an asset class deviates from its target allocation by a certain percentage (e.g., 5% or 10%). The best frequency depends on market volatility, transaction costs, and your personal discipline."
+    },
+    {
+      "q": "Does rebalancing always incur transaction costs?",
+      "a": "Yes, rebalancing typically involves buying and selling assets, which can incur brokerage commissions, trading fees, or expense ratios for ETFs/mutual funds. These costs can eat into your returns, so it's important to factor them in, especially if rebalancing frequently or with small amounts. This calculator helps estimate these costs."
+    },
+    {
+      "q": "Can I rebalance using new contributions instead of selling assets?",
+      "a": "Absolutely! Using new money to buy into underweighted asset classes is often a tax-efficient way to rebalance, as it avoids selling appreciated assets and incurring capital gains taxes. While this calculator focuses on direct buy/sell actions, incorporating new contributions can reduce the need for sales."
+    },
+    {
+      "q": "What are the risks of not rebalancing my portfolio?",
+      "a": "If you don't rebalance, your portfolio can drift significantly from its intended asset allocation. This can lead to increased risk exposure (e.g., becoming too stock-heavy in a bull market), reduced diversification, and potentially lower long-term returns if over-performing assets eventually revert to the mean."
+    },
+    {
+      "q": "Is rebalancing tax-efficient?",
+      "a": "Rebalancing can have tax implications. Selling appreciated assets in a taxable account can trigger capital gains taxes. To be tax-efficient, consider rebalancing within tax-advantaged accounts (like IRAs or 401ks) where trades aren't immediately taxable. You can also use tax-loss harvesting opportunities to offset gains if you have losses."
+    }
+  ],
+  "tags": [
+    "Investing",
+    "Portfolio Management",
+    "Financial Planning",
+    "Asset Allocation",
+    "Wealth Management",
+    "Investment Strategy"
+  ],
+  "related": [
+    "asset-allocation-calculator",
+    "investment-return-calculator",
+    "risk-tolerance-quiz",
+    "compound-interest-calculator"
+  ],
+  "article": [
+    {
+      "heading": "Why use this portfolio-rebalance-calculator?",
+      "body": "Investing is a dynamic journey, not a 'set it and forget it' endeavor. Over time, due to market fluctuations, different asset classes in your portfolio will perform differently. Some will grow significantly, while others might lag. This natural drift can cause your portfolio's original asset allocation – the precise mix of stocks, bonds, and cash you chose to match your risk tolerance and financial goals – to become misaligned. This is where a portfolio rebalance calculator becomes an indispensable tool.\n\nOur calculator simplifies the often complex task of rebalancing by providing clear, actionable insights. Instead of manually calculating target values, comparing them to current holdings, and determining buy/sell amounts, this tool automates the entire process. You simply input your current portfolio value, the value of your holdings in different asset classes (like stocks, bonds, and cash), and your desired target percentages for each. The calculator instantly reveals whether you need to buy or sell specific amounts of each asset to bring your portfolio back into equilibrium.\n\nBeyond just the 'what' and 'how much,' this calculator also takes into account crucial factors like transaction costs and rebalance thresholds. Transaction costs, though often small individually, can add up over time and impact your net returns. By including an estimate for these costs, you get a more realistic picture of the financial implications of rebalancing. The rebalance threshold allows you to define how much deviation you're willing to accept before taking action, helping you avoid over-rebalancing and unnecessary fees. Ultimately, using this calculator saves you time, reduces the potential for costly errors, and helps you maintain the disciplined approach essential for long-term investment success."
+    },
+    {
+      "heading": "How the calculation works",
+      "body": "The Portfolio Rebalance Calculator employs a straightforward, yet robust, methodology to guide your investment decisions. Here's a breakdown of the underlying calculations:\n\n1.  **Establishing Target Values:** First, the calculator takes your 'Current Total Portfolio Value' and applies your 'Target Stocks Percentage,' 'Target Bonds Percentage,' and 'Target Cash Percentage' to determine the ideal dollar amount you should hold in each asset class. For example, if your total portfolio is $100,000 and your target for stocks is 60%, the target stock value is $60,000.\n\n2.  **Calculating Current Allocation & Deviation:** Next, it compares these calculated target dollar amounts to your actual 'Current Stocks Value,' 'Current Bonds Value,' and 'Current Cash Value.' It also calculates your current percentage allocation for each asset class based on their current value relative to your total portfolio.\n\n3.  **Applying the Rebalance Threshold:** This is a critical step for smart rebalancing. The calculator then checks if the deviation between your current percentage allocation and your target percentage for each asset class exceeds your specified 'Rebalance Threshold Percentage.' For instance, if your target for stocks is 60% and your current holding is 66%, and your threshold is 5%, then the 6% deviation (66%-60%) exceeds the 5% threshold, triggering a rebalance action.\n\n4.  **Determining Buy/Sell Actions and Amounts:** If an asset's deviation crosses the threshold, the calculator determines the exact dollar amount needed to bring that asset back to its target value. If the current value is below target, it recommends a 'Buy' action; if it's above target, it suggests a 'Sell.' If the deviation is within the threshold, the action will be 'Hold,' with a zero amount.\n\n5.  **Estimating Transaction Costs:** For every buy or sell action recommended (i.e., for any asset where an amount other than zero is determined), the calculator applies your 'Estimated Transaction Cost Percentage' to the absolute rebalance amount for that asset. These individual costs are summed up to give you a 'Total Estimated Transaction Cost,' providing a realistic understanding of the cost implications.\n\n6.  **Final Portfolio Value After Costs:** Finally, the calculator subtracts the 'Total Estimated Transaction Cost' from your 'Current Total Portfolio Value' to show you the 'Total Portfolio Value After Costs,' providing a clear snapshot of your portfolio's net value post-rebalance. The 'Total Value Adjusted' output gives you a sum of all absolute changes needed across your assets."
+    },
+    {
+      "heading": "Common mistakes in portfolio-rebalance-calculator",
+      "body": "While rebalancing is a powerful strategy, several common mistakes can undermine its effectiveness. Being aware of these pitfalls can help you utilize this calculator and your investment strategy more wisely:\n\n1.  **Not Rebalancing at All (Allowing Drift):** The most common mistake is simply neglecting to rebalance. Without periodic adjustments, your portfolio can drift significantly from its intended allocation, exposing you to unintended risks or missing opportunities. Forgetting to rebalance means passively letting market forces dictate your risk profile, which is rarely optimal.\n\n2.  **Over-Rebalancing (Too Frequently):** Conversely, rebalancing too often can be detrimental. Frequent buying and selling, especially with smaller portfolios, can lead to excessive transaction costs that erode your returns. It can also lead to more frequent taxable events in non-retirement accounts. Our calculator's 'Rebalance Threshold Percentage' helps mitigate this by only recommending action when significant deviation occurs.\n\n3.  **Ignoring Transaction Costs:** Some investors overlook the impact of brokerage fees and trading commissions. While seemingly small, these costs can accumulate, particularly for active rebalancers. This calculator helps by providing an 'Estimated Transaction Cost,' encouraging you to factor these into your decision-making.\n\n4.  **Rebalancing Emotionally:** Making rebalancing decisions based on short-term market movements or fear/greed is counterproductive. The purpose of rebalancing is to maintain a disciplined, long-term strategy, not to chase performance or panic during downturns. Stick to your pre-defined schedule or threshold, irrespective of market sentiment.\n\n5.  **Neglecting Tax Implications:** In taxable investment accounts, selling appreciated assets to rebalance can trigger capital gains taxes. This can significantly reduce your net returns. Consider strategies like rebalancing in tax-advantaged accounts (e.g., 401(k), IRA) first, or using new contributions to buy underperforming assets to avoid selling winners and realizing gains.\n\n6.  **Incorrectly Setting Target Allocations:** Your target asset allocation should reflect your personal risk tolerance, investment horizon, and financial goals. A mistake here will lead to a rebalanced portfolio that is still not suited to your needs. Regularly review and adjust your target percentages as your life circumstances or goals change, not just your portfolio's performance.\n\n7.  **Failing to Include All Assets:** For a comprehensive rebalance, ensure you include all relevant investment accounts and asset classes in your calculations. Excluding certain accounts can lead to an incomplete picture and an imbalanced overall portfolio."
+    }
+  ]
+}
