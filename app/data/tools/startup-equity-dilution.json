@@ -1,0 +1,155 @@
+{
+  "slug": "startup-equity-dilution",
+  "title": "Startup Equity Dilution Calculator",
+  "seo": {
+    "title": "Calculate Your Startup Equity Dilution | Free Tool",
+    "description": "Understand how new funding rounds and stock options dilute your startup equity. Use our free calculator to model future ownership percentages for founders, employees, and early investors."
+  },
+  "inputs": [
+    {
+      "id": "your_current_shares",
+      "label": "Your Current Common Shares",
+      "type": "number",
+      "placeholder": "e.g., 100000",
+      "required": true,
+      "step": 1
+    },
+    {
+      "id": "total_shares_pre_round_actual",
+      "label": "Total Common Shares Outstanding Pre-Round (Excl. Option Pool)",
+      "type": "number",
+      "placeholder": "e.g., 900000",
+      "required": true,
+      "step": 1
+    },
+    {
+      "id": "pre_money_valuation",
+      "label": "Pre-Money Valuation for This Round ($)",
+      "type": "number",
+      "placeholder": "e.g., 10000000",
+      "required": true,
+      "step": 100000
+    },
+    {
+      "id": "new_capital_raised",
+      "label": "New Capital Raised in This Round ($)",
+      "type": "number",
+      "placeholder": "e.g., 2000000",
+      "required": true,
+      "step": 100000
+    },
+    {
+      "id": "target_post_money_option_pool_percentage",
+      "label": "Target Post-Money Option Pool %",
+      "type": "number",
+      "placeholder": "e.g., 15",
+      "required": true,
+      "step": 0.1
+    },
+    {
+      "id": "existing_option_pool_shares",
+      "label": "Existing Shares in Option Pool",
+      "type": "number",
+      "placeholder": "e.g., 100000",
+      "required": true,
+      "step": 1
+    }
+  ],
+  "outputs": [
+    {
+      "id": "your_new_ownership_pct",
+      "label": "Your New Ownership Percentage",
+      "unit": "%",
+      "precision": 2
+    },
+    {
+      "id": "total_dilution_from_round_pct",
+      "label": "Your Total Dilution from This Round",
+      "unit": "% points",
+      "precision": 2
+    },
+    {
+      "id": "fully_diluted_post_money_valuation",
+      "label": "Fully Diluted Post-Money Valuation",
+      "unit": "$",
+      "precision": 0
+    },
+    {
+      "id": "new_shares_issued_to_investors",
+      "label": "New Shares Issued to Investors",
+      "precision": 0
+    },
+    {
+      "id": "new_shares_added_to_option_pool",
+      "label": "New Shares Added to Option Pool",
+      "precision": 0
+    },
+    {
+      "id": "total_shares_post_money_fully_diluted",
+      "label": "Total Shares Post-Money (Fully Diluted)",
+      "precision": 0
+    }
+  ],
+  "formula": "function calculateDilution({ your_current_shares, total_shares_pre_round_actual, pre_money_valuation, new_capital_raised, target_post_money_option_pool_percentage, existing_option_pool_shares }) {\n    // Convert percentage to decimal\n    const targetOptionPoolDecimal = target_post_money_option_pool_percentage / 100;\n\n    // 1. Calculate Initial Fully Diluted Shares Pre-Round (including existing option pool)\n    const initial_fully_diluted_shares = total_shares_pre_round_actual + existing_option_pool_shares;\n\n    // Handle edge cases for division by zero\n    if (initial_fully_diluted_shares <= 0) {\n        // If no shares pre-round, and no new capital, assume no company or calculation not applicable\n        if (new_capital_raised === 0) {\n            return {\n                your_new_ownership_pct: 0,\n                total_dilution_from_round_pct: 0,\n                fully_diluted_post_money_valuation: 0,\n                new_shares_issued_to_investors: 0,\n                new_shares_added_to_option_pool: 0,\n                total_shares_post_money_fully_diluted: 0\n            };\n        }\n        // If new capital but no pre-existing shares, this is an unusual scenario. Assume new shares determine value.\n        // We'll proceed with pps calculation but need to be careful with inputs.\n    }\n\n    // If pre_money_valuation is 0, but new_capital_raised is > 0 and initial_fully_diluted_shares > 0\n    // this implies an infinite price per share if new_capital_raised > 0 and pre_money_valuation = 0.\n    // Or it means the company had no value pre-money, but is getting investment.\n    // For a calculator, we need to make a pragmatic assumption or indicate error.\n    // Let's assume a floor for PPS to avoid NaN or Infinity if pre_money_valuation is extremely low or zero.\n    const effective_pre_money_valuation = Math.max(pre_money_valuation, 0.01); // Prevent division by zero if pre-money is 0, allow a tiny value.\n\n    // 2. Calculate Price Per Share (PPS) for the new investment\n    // This PPS is determined by the pre-money valuation divided by the fully diluted shares pre-round.\n    // If initial_fully_diluted_shares is 0, pps would be Infinity or NaN. Handled above.\n    const pps = effective_pre_money_valuation / initial_fully_diluted_shares;\n\n    // 3. Calculate Shares Issued to New Investors\n    // If pps is 0 (due to initial_fully_diluted_shares being effectively infinite or very large compared to valuation),\n    // or pre_money_valuation is 0 and initial_fully_diluted_shares > 0, this can lead to issues.\n    // If pps is extremely small, new_shares_issued_to_investors can be very large.\n    const new_shares_issued_to_investors = pps > 0 ? new_capital_raised / pps : 0; // If pps is effectively zero, no shares issued for new capital.\n\n    // 4. Calculate shares needed for the *new* option pool to meet its target post-money percentage.\n    // This calculation ensures the option pool reaches the target percentage of the *final* fully diluted cap table.\n    \n    // Shares that exist *before* the option pool is adjusted for this round, but *after* new investment shares.\n    const shares_before_option_pool_adjustment = initial_fully_diluted_shares + new_shares_issued_to_investors;\n\n    let new_shares_added_to_option_pool_calc;\n    if (targetOptionPoolDecimal >= 1) { // If target is 100% or more, everyone gets diluted to 0 except for option pool (unrealistic)\n        new_shares_added_to_option_pool_calc = Infinity;\n    } else {\n        // The formula for new shares 'y' needed to hit target 'T' based on base shares 'B' and existing pool 'E':\n        // y = (T * B - E) / (1 - T)\n        new_shares_added_to_option_pool_calc = (targetOptionPoolDecimal * shares_before_option_pool_adjustment - existing_option_pool_shares) / (1 - targetOptionPoolDecimal);\n    }\n    \n    // Ensure new_shares_added_to_option_pool is not negative (we don't remove shares from the pool if it's already larger than target)\n    const new_shares_added_to_option_pool = Math.max(0, new_shares_added_to_option_pool_calc);\n\n    // 5. Calculate Total Shares Post-Money Fully Diluted\n    const total_shares_post_money_fully_diluted = initial_fully_diluted_shares + new_shares_issued_to_investors + new_shares_added_to_option_pool;\n\n    // 6. Calculate Your Initial Ownership Percentage (Pre-Round)\n    const initial_ownership_pct = initial_fully_diluted_shares > 0 ? (your_current_shares / initial_fully_diluted_shares) * 100 : 0;\n\n    // 7. Calculate Your New Ownership Percentage (Post-Round)\n    const your_new_ownership_pct = total_shares_post_money_fully_diluted > 0\n        ? (your_current_shares / total_shares_post_money_fully_diluted) * 100\n        : 0;\n\n    // 8. Calculate Total Dilution From Round\n    const total_dilution_from_round_pct = initial_ownership_pct - your_new_ownership_pct;\n\n    // 9. Fully Diluted Post-Money Valuation (reflects the value of the company after all dilution, at the price investors paid)\n    const fully_diluted_post_money_valuation = total_shares_post_money_fully_diluted * pps;\n\n    return {\n        your_new_ownership_pct: your_new_ownership_pct,\n        total_dilution_from_round_pct: total_dilution_from_round_pct,\n        fully_diluted_post_money_valuation: fully_diluted_post_money_valuation,\n        new_shares_issued_to_investors: new_shares_issued_to_investors,\n        new_shares_added_to_option_pool: new_shares_added_to_option_pool,\n        total_shares_post_money_fully_diluted: total_shares_post_money_fully_diluted\n    };\n}",
+  "summary": "Estimate the impact of future fundraising rounds and employee stock option pools on your current ownership percentage in a startup. Get clarity on your post-money equity.",
+  "cta": "Calculate Your Future Equity Today!",
+  "faq": [
+    {
+      "q": "What is startup equity dilution?",
+      "a": "Equity dilution occurs when a company issues new shares, decreasing the ownership percentage of existing shareholders. This commonly happens during new funding rounds (issuing shares to investors) or when expanding employee stock option pools."
+    },
+    {
+      "q": "Why does my equity get diluted?",
+      "a": "Your equity gets diluted primarily for two reasons: 1) To raise capital from new investors (e.g., angel investors, VCs) who receive shares in exchange for their investment, and 2) To create or expand an employee stock option pool, which reserves shares for future employees as an incentive."
+    },
+    {
+      "q": "How is the employee option pool calculated in dilution?",
+      "a": "The employee option pool is typically calculated as a target percentage of the company's post-money fully diluted shares. Shares for this pool are issued and dilute existing shareholders. Our calculator uses a common method where the pool is adjusted to meet its target after new investment shares are factored in, impacting all pre-existing shareholders."
+    },
+    {
+      "q": "What's the difference between pre-money and post-money valuation?",
+      "a": "Pre-money valuation is the value of the company *before* a new investment. Post-money valuation is the pre-money valuation *plus* the new capital raised in the funding round. Dilution calculations often start with the pre-money valuation to determine the price per share for new investors."
+    },
+    {
+      "q": "Can I prevent equity dilution?",
+      "a": "Complete prevention of dilution is generally not possible or advisable for a growth-oriented startup. Raising capital and incentivizing employees are critical for growth, and both involve issuing new shares. However, you can manage dilution by negotiating favorable terms, limiting the size of funding rounds, and ensuring efficient use of capital."
+    },
+    {
+      "q": "Is equity dilution always a bad thing?",
+      "a": "Not necessarily. While dilution reduces your percentage ownership, it often comes with increased company value due to new investments that fund growth, product development, and market expansion. A smaller percentage of a much larger pie can be worth significantly more than a larger percentage of a smaller, stagnating pie."
+    },
+    {
+      "q": "How do convertible notes affect dilution?",
+      "a": "Convertible notes (and SAFEs) typically convert into equity during a qualified financing round, often at a discount to the new round's valuation or at a valuation cap. This conversion creates additional shares that dilute existing shareholders. While not directly an input in this specific calculator, it's a critical factor to consider when modeling your cap table."
+    }
+  ],
+  "tags": [
+    "startup equity",
+    "equity dilution",
+    "fundraising",
+    "cap table",
+    "stock options",
+    "valuation",
+    "venture capital",
+    "founder equity"
+  ],
+  "related": [
+    "startup-valuation-calculator",
+    "employee-stock-option-calculator",
+    "convertible-note-calculator"
+  ],
+  "article": [
+    {
+      "heading": "Why use this startup-equity-dilution?",
+      "body": "Understanding equity dilution is paramount for anyone involved in a startup—founders, early employees, and angel investors alike. Your equity is not just a number; it represents your stake in the company's future success. However, as a startup grows, it typically requires external capital and a talented team, both of which often necessitate issuing new shares, thereby diluting existing ownership. This process can be complex and intimidating, often leading to misunderstandings and miscalculations.\n\nOur Startup Equity Dilution Calculator simplifies this intricate process. Instead of grappling with complex spreadsheets and obscure term sheet clauses, you can input key figures related to your current ownership, company valuation, new investment, and option pool expansion. The calculator then provides clear, actionable insights into your projected ownership percentage post-financing. This clarity is invaluable for several reasons: it empowers founders to make informed decisions about fundraising strategies, helps employees understand the true value of their stock options, and allows angel investors to accurately project their returns. By demystifying dilution, this tool enables better planning, negotiation, and overall financial foresight in the dynamic world of startups. Use it to model various scenarios, gauge the impact of potential funding rounds, and protect your long-term interests."
+    },
+    {
+      "heading": "How the calculation works",
+      "body": "The calculation of equity dilution, while appearing complex, follows a logical series of steps that account for new shares being issued. Our calculator uses a standard methodology to provide accurate results:\n\n1.  **Initial Fully Diluted Shares:** We begin by determining the total number of shares outstanding *before* the current funding round, including all common shares held by founders and existing investors, plus any shares already allocated to the employee option pool. This gives us the 'fully diluted' picture of the company's equity prior to this new event.\n\n2.  **Price Per Share (PPS):** The pre-money valuation agreed upon for the round is divided by these initial fully diluted shares. This establishes the price per share at which new investors will purchase their equity.\n\n3.  **New Shares for Investors:** The total new capital raised in the round is then divided by the calculated PPS. This gives us the number of new shares that will be issued to the incoming investors.\n\n4.  **Option Pool Adjustment:** This is a crucial step. Companies often need to expand their employee stock option pool to attract and retain talent after a funding round. We calculate the number of *additional* shares required to bring the option pool to its target post-money percentage (as specified in your input). This target is applied to the *final* fully diluted share count, meaning the shares for the new pool dilute *all* existing shareholders.\n\n5.  **Total Shares Post-Money Fully Diluted:** All these new shares—those for investors and the expanded option pool—are added to the initial fully diluted shares. This gives you the total number of shares outstanding after all dilutive events from this round.\n\n6.  **Your Ownership Before and After:** We first determine your current ownership percentage based on your shares relative to the initial fully diluted shares. Then, your new ownership percentage is calculated by dividing your current shares by the *new* total shares post-money.\n\n7.  **Dilution Impact:** Finally, your total dilution is simply the difference between your initial and new ownership percentages, expressed in percentage points. The calculator also provides the Fully Diluted Post-Money Valuation, which is the total post-round shares multiplied by the price per share, giving a comprehensive view of the company's value after all these changes."
+    },
+    {
+      "heading": "Common mistakes in startup-equity-dilution",
+      "body": "Navigating startup equity can be fraught with potential pitfalls. Here are some common mistakes to avoid when thinking about or calculating dilution:\n\n*   **Ignoring 'Fully Diluted' Numbers:** Many founders and early employees only consider issued and outstanding common shares, forgetting about unissued shares reserved for option pools, convertible notes, SAFEs, or warrants. Always work with fully diluted share counts for accurate ownership percentages.\n\n*   **Underestimating Option Pool Impact:** The expansion of an employee stock option pool is often a significant dilutive event. Founders sometimes overlook how the creation or 're-upping' of the option pool, usually before new investor money, can substantially dilute their own pre-money stake.\n\n*   **Neglecting Convertible Instruments:** Convertible notes, SAFEs, and other convertible instruments will convert into equity at a future funding round, often with discounts or valuation caps. Failing to factor in their eventual conversion shares can lead to a nasty surprise when the actual dilution occurs.\n\n*   **Focusing Only on Founder Dilution:** While founders often bear the brunt of early dilution, it's crucial to understand the impact on early employees and angel investors. A fair cap table management ensures all stakeholders feel valued and incentivized.\n\n*   **Failing to Model Multiple Rounds:** Startups typically go through several funding rounds. Thinking about dilution in isolation for a single round can give a false sense of security. It's wise to project dilution across multiple hypothetical future rounds to understand the long-term impact on ownership.\n\n*   **Over-Optimizing for Current Ownership:** Sometimes, founders might try to minimize dilution too aggressively, which can lead to insufficient capital, a smaller option pool (hindering hiring), or unfavorable terms. Remember, a smaller percentage of a highly successful, valuable company is almost always better than a larger percentage of a struggling one.\n\n*   **Confusing Pre-Money and Post-Money:** These terms are fundamental to valuation and dilution. Misapplying them can lead to significant errors in calculating the price per share, new investor ownership, and overall dilution. Always clarify which valuation is being used in specific contexts."
+    }
+  ]
+}
