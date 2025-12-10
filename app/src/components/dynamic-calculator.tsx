@@ -26,10 +26,15 @@ const evaluateFormula = (
   formula: string,
   inputs: Record<string, number | string>
 ): ToolResult => {
-  const argNames = Object.keys(inputs);
-  const argValues = Object.values(inputs);
-  const runner = new Function(...argNames, formula);
-  const result = runner(...argValues);
+  const scope = Object.assign(Object.create(null), inputs);
+  const runner = new Function(
+    "inputs",
+    "scope",
+    `with (scope) {
+      ${formula}
+    }`
+  );
+  const result = runner(inputs, scope);
   if (!result || typeof result !== "object") {
     throw new Error("Formula must return an object of results");
   }
