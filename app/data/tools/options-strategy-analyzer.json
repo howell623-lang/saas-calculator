@@ -1,0 +1,180 @@
+{
+  "slug": "options-strategy-analyzer",
+  "title": "Options Strategy Analyzer Calculator",
+  "seo": {
+    "title": "Options Strategy Analyzer | Max Profit, Loss, Breakeven for Spreads",
+    "description": "Analyze vertical options strategies (call or put spreads) to determine potential maximum profit, maximum loss, breakeven points, and capital required. Plan your options trades with confidence."
+  },
+  "inputs": [
+    {
+      "id": "buyStrike",
+      "label": "Buy Option Strike Price ($)",
+      "type": "number",
+      "placeholder": "100.00",
+      "required": true,
+      "step": 0.01
+    },
+    {
+      "id": "buyPremium",
+      "label": "Buy Option Premium (per share $)",
+      "type": "number",
+      "placeholder": "3.00",
+      "required": true,
+      "step": 0.01
+    },
+    {
+      "id": "sellStrike",
+      "label": "Sell Option Strike Price ($)",
+      "type": "number",
+      "placeholder": "105.00",
+      "required": true,
+      "step": 0.01
+    },
+    {
+      "id": "sellPremium",
+      "label": "Sell Option Premium (per share $)",
+      "type": "number",
+      "placeholder": "1.50",
+      "required": true,
+      "step": 0.01
+    },
+    {
+      "id": "optionType",
+      "label": "Option Type",
+      "type": "text",
+      "placeholder": "Call",
+      "required": true,
+      "options": [
+        "Call",
+        "Put"
+      ]
+    },
+    {
+      "id": "contracts",
+      "label": "Number of Contracts",
+      "type": "number",
+      "placeholder": "1",
+      "required": true,
+      "step": 1
+    },
+    {
+      "id": "multiplier",
+      "label": "Contract Multiplier",
+      "type": "number",
+      "placeholder": "100",
+      "required": true,
+      "step": 1
+    },
+    {
+      "id": "underlyingAtExpiration",
+      "label": "Underlying Price at Expiration ($)",
+      "type": "number",
+      "placeholder": "102.50",
+      "required": true,
+      "step": 0.01
+    }
+  ],
+  "outputs": [
+    {
+      "id": "netPremiumCost",
+      "label": "Net Premium (Total)",
+      "unit": "$",
+      "precision": 2
+    },
+    {
+      "id": "maxProfit",
+      "label": "Maximum Profit",
+      "unit": "$",
+      "precision": 2
+    },
+    {
+      "id": "maxLoss",
+      "label": "Maximum Loss",
+      "unit": "$",
+      "precision": 2
+    },
+    {
+      "id": "breakevenPoint",
+      "label": "Breakeven Point",
+      "unit": "$",
+      "precision": 2
+    },
+    {
+      "id": "profitOrLossAtExpiration",
+      "label": "P/L at Expiration Price",
+      "unit": "$",
+      "precision": 2
+    },
+    {
+      "id": "capitalRequired",
+      "label": "Capital Required",
+      "unit": "$",
+      "precision": 2
+    }
+  ],
+  "formula": "let netPremiumPerShare = inputs.buyPremium - inputs.sellPremium;\nlet totalNetPremium = netPremiumPerShare * inputs.contracts * inputs.multiplier;\nlet spreadWidth = Math.abs(inputs.buyStrike - inputs.sellStrike);\nlet P_L_at_Expiration_per_share = 0;\nlet maxProfit_per_share = 0;\nlet maxLoss_per_share = 0;\nlet breakevenPoint = 0;\nlet capitalRequired_val = 0;\n\nconst lowStrike = Math.min(inputs.buyStrike, inputs.sellStrike);\nconst highStrike = Math.max(inputs.buyStrike, inputs.sellStrike);\nconst isDebitStrategy = netPremiumPerShare > 0.0001; // Using a small epsilon to handle floating point comparisons\n\nif (inputs.optionType === \"Call\") {\n    if (isDebitStrategy) { // Call Debit Spread (e.g., Buy 100C, Sell 105C)\n        P_L_at_Expiration_per_share = Math.min(\n            Math.max(-netPremiumPerShare, inputs.underlyingAtExpiration - lowStrike - netPremiumPerShare),\n            spreadWidth - netPremiumPerShare\n        );\n        maxProfit_per_share = spreadWidth - netPremiumPerShare;\n        maxLoss_per_share = -netPremiumPerShare;\n        breakevenPoint = lowStrike + netPremiumPerShare;\n        capitalRequired_val = totalNetPremium;\n    } else { // Call Credit Spread (e.g., Sell 105C, Buy 110C)\n        const creditReceived = Math.abs(netPremiumPerShare);\n        P_L_at_Expiration_per_share = Math.min(\n            Math.max(-(spreadWidth - creditReceived), creditReceived - Math.max(0, inputs.underlyingAtExpiration - lowStrike)),\n            creditReceived\n        );\n        maxProfit_per_share = creditReceived;\n        maxLoss_per_share = -(spreadWidth - creditReceived);\n        breakevenPoint = lowStrike + spreadWidth - creditReceived; \n        capitalRequired_val = (spreadWidth - creditReceived) * inputs.contracts * inputs.multiplier;\n    }\n} else { // Put\n    if (isDebitStrategy) { // Put Debit Spread (e.g., Buy 105P, Sell 100P)\n        P_L_at_Expiration_per_share = Math.min(\n            Math.max(-netPremiumPerShare, highStrike - inputs.underlyingAtExpiration - netPremiumPerShare),\n            spreadWidth - netPremiumPerShare\n        );\n        maxProfit_per_share = spreadWidth - netPremiumPerShare;\n        maxLoss_per_share = -netPremiumPerShare;\n        breakevenPoint = highStrike - netPremiumPerShare;\n        capitalRequired_val = totalNetPremium;\n    } else { // Put Credit Spread (e.g., Sell 100P, Buy 95P)\n        const creditReceived = Math.abs(netPremiumPerShare);\n        P_L_at_Expiration_per_share = Math.min(\n            Math.max(-(spreadWidth - creditReceived), creditReceived - Math.max(0, highStrike - inputs.underlyingAtExpiration)),\n            creditReceived\n        );\n        maxProfit_per_share = creditReceived;\n        maxLoss_per_share = -(spreadWidth - creditReceived);\n        breakevenPoint = highStrike - spreadWidth + creditReceived;\n        capitalRequired_val = (spreadWidth - creditReceived) * inputs.contracts * inputs.multiplier;\n    }\n}\n\nlet profitOrLossAtExpiration = P_L_at_Expiration_per_share * inputs.contracts * inputs.multiplier;\nlet maxProfit = maxProfit_per_share * inputs.contracts * inputs.multiplier;\nlet maxLoss = maxLoss_per_share * inputs.contracts * inputs.multiplier;\n\nreturn {\n  netPremiumCost: totalNetPremium,\n  maxProfit: maxProfit,\n  maxLoss: maxLoss,\n  breakevenPoint: breakevenPoint,\n  profitOrLossAtExpiration: profitOrLossAtExpiration,\n  capitalRequired: capitalRequired_val\n};\n",
+  "summary": "This tool helps you evaluate the potential outcomes of various vertical options trading strategies (debit or credit spreads). Input your contract details and see projected maximum profit, maximum loss, breakeven points, and profit/loss at a specific expiration price.",
+  "cta": "Analyze Your Options Strategy",
+  "faq": [
+    {
+      "q": "What is an options strategy analyzer?",
+      "a": "An options strategy analyzer is a tool that helps traders evaluate the potential profit, loss, and breakeven points for various options trading strategies based on hypothetical underlying asset prices at expiration. It provides a clearer picture of a strategy's risk-reward profile."
+    },
+    {
+      "q": "How does this calculator define a 'vertical spread'?",
+      "a": "This calculator specifically analyzes vertical spreads, which involve simultaneously buying one option and selling another option of the same type (both calls or both puts) and expiration date, but with different strike prices. This creates a defined risk/reward profile."
+    },
+    {
+      "q": "What do 'Maximum Profit' and 'Maximum Loss' mean?",
+      "a": "Maximum Profit is the highest possible gain you can achieve from the strategy, typically capped by the spread width and net premium. Maximum Loss is the greatest potential financial risk, representing the most you can lose, also usually defined within the strategy's structure."
+    },
+    {
+      "q": "What is a 'Breakeven Point'?",
+      "a": "The breakeven point is the specific underlying asset price at expiration where your options strategy results in neither a profit nor a loss. At this price, the value of the options offsets the initial premium paid or received, making the net outcome zero."
+    },
+    {
+      "q": "How is 'Capital Required' calculated?",
+      "a": "For debit strategies (where you pay a net premium), the capital required is typically the total net premium paid. For credit strategies (where you receive a net premium), the capital required represents the maximum potential loss (spread width minus net credit received), as this amount usually needs to be held as margin by your broker."
+    },
+    {
+      "q": "Can this tool analyze multi-leg strategies like iron condors or butterflies?",
+      "a": "This specific calculator is designed for single-leg options and two-leg vertical spreads. More complex strategies involving three or four legs, such as iron condors or butterflies, would require defining multiple pairs of options and are typically analyzed by more advanced multi-leg options calculators."
+    },
+    {
+      "q": "Why is the 'Underlying Price at Expiration' important for analysis?",
+      "a": "Options derive their value from the underlying asset's price. The 'Underlying Price at Expiration' is crucial because it determines whether each option in your strategy expires in-the-money, at-the-money, or out-of-the-money, directly impacting the strategy's final profit or loss. It's used for scenario planning."
+    }
+  ],
+  "tags": [
+    "options",
+    "trading",
+    "strategy",
+    "analyzer",
+    "profit loss",
+    "breakeven",
+    "vertical spread",
+    "call spread",
+    "put spread",
+    "options calculator"
+  ],
+  "related": [
+    "options-profit-calculator",
+    "covered-call-calculator",
+    "cash-secured-put-calculator",
+    "iron-condor-calculator"
+  ],
+  "article": [
+    {
+      "heading": "Why use this options-strategy-analyzer?",
+      "body": "Navigating the complex world of options trading can be daunting, even for seasoned investors. With numerous strategies, strike prices, expiration dates, and premiums to consider, it's easy to get lost in the details. An Options Strategy Analyzer like this one serves as an invaluable tool, transforming abstract concepts into clear, actionable insights.\n\nPrimarily, this analyzer empowers you to make informed decisions. Before committing capital to a trade, you can visualize the potential profit and loss scenarios across a range of underlying asset prices. This foresight is critical for planning your entry and exit points and understanding the full spectrum of outcomes for a vertical spread, whether it's a debit or credit call/put spread.\n\nOne of the most significant benefits is risk management. By explicitly calculating the maximum potential loss, you gain a clear understanding of your downside risk. This allows you to size your positions appropriately and ensure that any single trade doesn't jeopardize your overall portfolio. Similarly, identifying the maximum profit helps set realistic expectations for your upside potential.\n\nThe tool also brings clarity to otherwise complex option payoff profiles. Instead of mentally calculating the intricacies of how two different strike prices and premiums interact, the analyzer provides instant results for breakeven points and profit/loss at a specified underlying price. This simplification helps avoid common errors and boosts your confidence in the chosen strategy.\n\nFurthermore, it acts as an educational aid. By inputting different strike prices, premiums, or option types, you can observe how these changes impact the strategy's overall risk-reward dynamics. This hands-on experimentation deepens your understanding of options mechanics and helps you refine your strategic approach. In essence, this analyzer is not just a calculator; it's a critical component for intelligent options trading, offering a clear lens through which to evaluate and optimize your strategies."
+    },
+    {
+      "heading": "How the calculation works",
+      "body": "This Options Strategy Analyzer focuses on vertical spreads, a common strategy involving two options of the same type (calls or puts) and expiration date, but different strike prices. The calculation process simplifies complex option interactions to provide clear financial outcomes.\n\nFirst, the calculator determines the **Net Premium**. This is calculated by subtracting the premium received from the option you sell from the premium paid for the option you buy (`Buy Premium - Sell Premium`). A positive net premium indicates a debit spread (you paid money), while a negative net premium indicates a credit spread (you received money).\n\nNext, the **Spread Width** is established by finding the absolute difference between the two strike prices (`|Buy Strike - Sell Strike|`). This width is crucial as it often defines the maximum profit or loss potential of the strategy.\n\nTo calculate the **Profit/Loss at Expiration** for a given underlying price, the calculator evaluates the intrinsic value of each option at that price. For calls, an option is in-the-money if the underlying price is above its strike; for puts, it's in-the-money if the underlying price is below its strike. The profit or loss from the strategy at expiration is then determined by the combined intrinsic values of the bought and sold options, adjusted by the initial net premium.\n\n**Maximum Profit** and **Maximum Loss** are determined by the strategy's fixed boundaries. For a debit spread (e.g., a long call debit spread), the maximum profit is typically the spread width minus the net premium paid, occurring when both options expire deep in-the-money. The maximum loss is the net premium paid, occurring when both options expire worthless. For a credit spread (e.g., a short call credit spread), the maximum profit is the net premium received, occurring when both options expire worthless. The maximum loss is the spread width minus the net premium received, occurring when both options expire deep in-the-money, requiring the most capital to cover.\n\nThe **Breakeven Point** is the specific underlying price at expiration where the strategy's profit or loss is exactly zero. For call debit spreads, it's typically the lower strike plus the net premium per share. For call credit spreads, it's the lower strike plus the spread width minus the net credit per share. Similar logic applies to put spreads, using the higher strike as a reference point. The formula employs conditional logic and `Math.min`/`Math.max` functions to accurately map the payoff profile based on option type, whether it's a debit or credit strategy, and the relative positions of the strike prices.\n\nFinally, **Capital Required** is presented. For debit strategies, this is simply the total net premium paid. For credit strategies, it represents the maximum potential loss (spread width minus net credit received), as this amount must typically be held as margin by your broker to cover potential obligations."
+    },
+    {
+      "heading": "Common mistakes in options-strategy-analyzer",
+      "body": "While an options strategy analyzer is a powerful tool, its effectiveness depends on correct usage and understanding its limitations. Here are some common mistakes traders make when utilizing such an analyzer:\n\n**1. Misinterpreting Max Profit/Loss as Guaranteed:** The analyzer provides theoretical maximum profit and loss at expiration. It doesn't account for early assignment risk, liquidity issues, or changes in implied volatility that can affect prices before expiration. Always remember that these are theoretical ceilings and floors, not guarantees.\n\n**2. Ignoring Time Decay (Theta):** Most basic analyzers, including this one, show the profit/loss at *expiration*. They do not illustrate the profit/loss curve *leading up* to expiration, which is heavily influenced by time decay (theta). A strategy that looks profitable at expiration might show significant losses if closed prematurely due to time erosion.\n\n**3. Forgetting Commissions and Fees:** The calculations in this analyzer do not include brokerage commissions, exchange fees, or regulatory fees. These costs can significantly impact the profitability of high-volume or low-premium strategies, effectively raising your breakeven points or reducing your net profit.\n\n**4. Incorrectly Inputting Strategy Parameters:** A common error is mixing up the 'buy' and 'sell' strikes or premiums, or selecting the wrong option type (call vs. put) for your intended strategy. Even a small error in input can lead to completely skewed results for max profit, max loss, and breakeven points, causing dangerous misjudgments.\n\n**5. Over-Reliance on a Single Expiration Price Scenario:** While the analyzer allows you to input a hypothetical underlying price at expiration, successful options trading requires considering a *range* of potential underlying prices. Running multiple scenarios or visualizing the payoff graph helps build a comprehensive understanding of the strategy's behavior across different market conditions.\n\n**6. Neglecting Implied Volatility (IV):** Implied volatility plays a crucial role in option pricing. This analyzer focuses on the static payoff at expiration based on fixed premiums. It doesn't show how changes in IV can cause premiums to expand or contract, impacting mark-to-market P/L even if the underlying price remains stable.\n\n**7. Ignoring Liquidity and Bid-Ask Spreads:** For less liquid options, the difference between the bid and ask price (the spread) can be substantial. This means your actual entry and exit prices might be worse than the mid-prices used in theoretical calculations, potentially eroding profits or increasing losses.\n\nBy being aware of these common pitfalls, traders can use an options strategy analyzer more effectively, integrate its insights into a broader trading plan, and make more prudent decisions."
+    }
+  ]
+}

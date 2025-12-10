@@ -1,0 +1,138 @@
+{
+  "slug": "npv-irr-project-valuation",
+  "title": "NPV & IRR Project Valuation Calculator",
+  "seo": {
+    "title": "NPV & IRR Project Valuation Calculator | Evaluate Investments",
+    "description": "Calculate Net Present Value (NPV) and Internal Rate of Return (IRR) to thoroughly evaluate potential projects and investment opportunities. Make informed capital budgeting decisions."
+  },
+  "inputs": [
+    {
+      "id": "initialInvestment",
+      "label": "Initial Investment (Year 0)",
+      "type": "number",
+      "placeholder": "100000",
+      "required": true,
+      "step": 100
+    },
+    {
+      "id": "discountRate",
+      "label": "Discount Rate (%)",
+      "type": "number",
+      "placeholder": "10",
+      "required": true,
+      "step": 0.1
+    },
+    {
+      "id": "annualCashFlows",
+      "label": "Annual Cash Flow (Years 1 to N)",
+      "type": "number",
+      "placeholder": "30000",
+      "required": true,
+      "step": 100
+    },
+    {
+      "id": "numPeriods",
+      "label": "Number of Periods (Years)",
+      "type": "number",
+      "placeholder": "5",
+      "required": true,
+      "step": 1,
+      "min": 1,
+      "max": 20
+    },
+    {
+      "id": "salvageValue",
+      "label": "Salvage Value (End of Project)",
+      "type": "number",
+      "placeholder": "0",
+      "required": false,
+      "step": 100
+    }
+  ],
+  "outputs": [
+    {
+      "id": "npv",
+      "label": "Net Present Value",
+      "unit": "$",
+      "precision": 2
+    },
+    {
+      "id": "irr",
+      "label": "Internal Rate of Return",
+      "unit": "%",
+      "precision": 2
+    },
+    {
+      "id": "paybackPeriod",
+      "label": "Payback Period",
+      "unit": "years",
+      "precision": 2
+    }
+  ],
+  "formula": "const initialInvestment = inputs.initialInvestment;\nconst discountRate = inputs.discountRate / 100; // Convert percentage to decimal\nconst annualCashFlows = inputs.annualCashFlows;\nconst numPeriods = inputs.numPeriods;\nconst salvageValue = inputs.salvageValue || 0;\n\n// Basic input validation\nif (initialInvestment < 0 || discountRate <= -1 || numPeriods < 1) {\n    return {\n        npv: null,\n        irr: null,\n        paybackPeriod: null\n    };\n}\n\n// --- NPV Calculation ---\nlet npv = -initialInvestment;\nfor (let t = 1; t <= numPeriods; t++) {\n    let cashFlowAtT = annualCashFlows;\n    if (t === numPeriods) {\n        cashFlowAtT += salvageValue;\n    }\n    if (1 + discountRate <= 0) { // Avoid division by zero or negative base for power\n        npv = Infinity; // Or NaN, depending on desired error representation\n        break;\n    }\n    npv += cashFlowAtT / Math.pow(1 + discountRate, t);\n}\n\n// --- IRR Calculation (Bisection Method) ---\nlet irrResult = null;\nconst calculateNPVForRate = (rate) => {\n    let currentNPV = -initialInvestment;\n    for (let t = 1; t <= numPeriods; t++) {\n        let cashFlowAtT = annualCashFlows;\n        if (t === numPeriods) {\n            cashFlowAtT += salvageValue;\n        }\n        if (1 + rate <= 0) return Infinity; // Prevent division by zero or negative base for power\n        currentNPV += cashFlowAtT / Math.pow(1 + rate, t);\n    }\n    return currentNPV;\n};\n\nlet lowerBound = -0.99; // -99%\nlet upperBound = 5.0; // 500%\nlet foundSignChange = false;\n\n// Check initial bounds for sign change\nconst npvAtLower = calculateNPVForRate(lowerBound);\nconst npvAtUpper = calculateNPVForRate(upperBound);\n\nif (npvAtLower * npvAtUpper < 0) {\n    foundSignChange = true;\n} else {\n    // Try to extend bounds if no sign change initially (e.g., all positive or all negative NPVs)\n    if (npvAtLower > 0) { // NPV is positive, so IRR must be lower (more negative discount rate)\n        let tempLower = lowerBound;\n        for (let i = 0; i < 100; i++) {\n            tempLower = Math.max(-0.999, tempLower - 0.01);\n            if (calculateNPVForRate(tempLower) < 0) {\n                lowerBound = tempLower;\n                foundSignChange = true;\n                break;\n            }\n        }\n    } else if (npvAtUpper < 0) { // NPV is negative, so IRR must be higher\n        let tempUpper = upperBound;\n        for (let i = 0; i < 100; i++) {\n            tempUpper = tempUpper + 0.05;\n            if (tempUpper > 10.0) {break;}\n            if (calculateNPVForRate(tempUpper) > 0) {\n                upperBound = tempUpper;\n                foundSignChange = true;\n                break;\n            }\n        }\n    }\n}\n\nif (foundSignChange) {\n    const tolerance = 0.000001; // 0.0001%\n    const maxIterations = 1000;\n    for (let i = 0; i < maxIterations; i++) {\n        if (upperBound - lowerBound < tolerance) {\n            irrResult = (lowerBound + upperBound) / 2;\n            break;\n        }\n        const midPoint = (lowerBound + upperBound) / 2;\n        const npvAtMid = calculateNPVForRate(midPoint);\n\n        if (npvAtMid > 0) {\n            lowerBound = midPoint;\n        } else {\n            upperBound = midPoint;\n        }\n    }\n    if (typeof irrResult === 'number') {\n        irrResult = irrResult * 100; // Convert to percentage\n    } else {\n        irrResult = null;\n    }\n}\n\n// --- Payback Period Calculation ---\nlet paybackPeriodResult = null;\nif (annualCashFlows > 0) {\n    let remainingInvestment = initialInvestment;\n    let yearsToPayback = 0;\n\n    for (let t = 1; t <= numPeriods; t++) {\n        let currentCF = annualCashFlows;\n        if (t === numPeriods) {\n            currentCF += salvageValue;\n        }\n\n        if (remainingInvestment <= 0) {\n            break;\n        }\n\n        if (currentCF <= 0) { // If cash flow becomes non-positive, payback is stalled or impossible\n            paybackPeriodResult = null;\n            break;\n        }\n\n        if (remainingInvestment <= currentCF) {\n            yearsToPayback = t - 1 + (remainingInvestment / currentCF);\n            remainingInvestment = 0;\n            break;\n        } else {\n            remainingInvestment -= currentCF;\n            yearsToPayback = t; // Full year passed\n        }\n    }\n\n    if (remainingInvestment <= 0) {\n        paybackPeriodResult = yearsToPayback;\n    } else {\n        paybackPeriodResult = null; // Indicate 'Never' or not paid back within project life\n    }\n}\n\n// Ensure all results are numbers or null for consistency with precision\nif (isNaN(npv)) npv = null;\nif (isNaN(irrResult)) irrResult = null;\nif (isNaN(paybackPeriodResult)) paybackPeriodResult = null;\n\nreturn {\n    npv: npv,\n    irr: irrResult,\n    paybackPeriod: paybackPeriodResult\n};",
+  "summary": "This tool helps you evaluate the financial viability of projects by calculating their Net Present Value (NPV) and Internal Rate of Return (IRR), essential metrics for sound investment decisions. It also provides the Payback Period.",
+  "cta": "Evaluate Your Project Now",
+  "faq": [
+    {
+      "q": "What is Net Present Value (NPV)?",
+      "a": "Net Present Value (NPV) is a capital budgeting metric used to assess the profitability of a project or investment. It calculates the present value of all future cash flows (both positive and negative) generated by a project, discounted at a specific rate, and subtracts the initial investment. A positive NPV suggests the project is expected to generate more value than its cost, making it financially attractive."
+    },
+    {
+      "q": "What is Internal Rate of Return (IRR)?",
+      "a": "The Internal Rate of Return (IRR) is the discount rate that makes the Net Present Value (NPV) of all cash flows from a particular project equal to zero. In simpler terms, it's the effective rate of return an investment is expected to yield. Companies often compare a project's IRR to their required rate of return (hurdle rate) to decide whether to undertake the project."
+    },
+    {
+      "q": "What is the difference between NPV and IRR?",
+      "a": "NPV provides a dollar value estimate of a project's profitability, indicating how much wealth an investment is expected to create. IRR, on the other hand, gives a percentage return rate, showing the project's inherent rate of return. While both are critical, NPV is generally preferred for mutually exclusive projects as it indicates the absolute value creation, whereas IRR can sometimes be misleading with projects of different scales or with unconventional cash flow patterns."
+    },
+    {
+      "q": "When should I use NPV vs. IRR?",
+      "a": "Use NPV when comparing mutually exclusive projects, as it directly shows the project that adds the most value to the company. It's also more reliable when cash flows are irregular or change sign. Use IRR as a simple indicator of a project's efficiency or rate of return, especially when comparing independent projects against a hurdle rate. Often, both are used together for a comprehensive view."
+    },
+    {
+      "q": "What is considered a 'good' NPV?",
+      "a": "A good NPV is any positive NPV. A positive NPV indicates that the project is expected to generate returns above the required rate of return (discount rate), thereby increasing shareholder wealth. The higher the positive NPV, the more financially attractive the project is considered to be."
+    },
+    {
+      "q": "What is considered a 'good' IRR?",
+      "a": "A good IRR is one that is higher than the company's cost of capital or hurdle rate. If the IRR exceeds the hurdle rate, the project is generally deemed acceptable. However, simply having a high IRR isn't always sufficient; it must be evaluated in context, especially for projects with non-standard cash flow patterns or vastly different sizes."
+    },
+    {
+      "q": "Does salvage value affect NPV and IRR calculations?",
+      "a": "Yes, salvage value significantly affects both NPV and IRR. Salvage value represents the estimated resale value of an asset at the end of its useful life, which is treated as an additional cash inflow in the final period of the project. Including it increases the total cash inflows, generally leading to a higher NPV and IRR, reflecting a more accurate financial picture of the project."
+    },
+    {
+      "q": "What is the Payback Period?",
+      "a": "The Payback Period is the amount of time it takes for an investment to generate enough cash flow to recover its initial cost. It is a simple metric for assessing liquidity and risk. Shorter payback periods are generally preferred, but it doesn't consider the time value of money or cash flows beyond the payback point, making it less comprehensive than NPV or IRR."
+    }
+  ],
+  "tags": [
+    "finance",
+    "investment",
+    "project management",
+    "valuation",
+    "npv",
+    "irr",
+    "capital budgeting",
+    "financial analysis"
+  ],
+  "related": [
+    "roi-calculator",
+    "loan-amortization-calculator",
+    "debt-to-equity-ratio-calculator"
+  ],
+  "article": [
+    {
+      "heading": "Why use this npv-irr-project-valuation?",
+      "body": "In the world of business and finance, making sound investment decisions is paramount to long-term success. Whether you're a small business owner considering new equipment, a corporate executive evaluating a multi-million-dollar expansion, or an investor weighing potential ventures, understanding a project's financial viability is crucial. This NPV & IRR Project Valuation Calculator provides you with the essential tools—Net Present Value (NPV), Internal Rate of Return (IRR), and Payback Period—to objectively assess and compare investment opportunities.\n\nTraditional accounting metrics often fall short because they don't account for the 'time value of money'—the concept that a dollar today is worth more than a dollar tomorrow due due to its potential earning capacity. NPV and IRR are sophisticated capital budgeting techniques that precisely address this, discounting future cash flows back to their present value. By using this calculator, you can move beyond guesswork and emotional biases, relying instead on quantitative analysis to guide your choices. It simplifies complex calculations that would otherwise require extensive spreadsheet work, providing quick, accurate insights into a project's potential profitability and efficiency.\n\nThis tool is invaluable for several reasons: It enables objective decision-making by providing clear financial metrics; it allows for effective comparison of different projects, even those with varying initial costs and cash flow patterns; it helps in assessing the inherent risk by incorporating a discount rate that reflects the cost of capital and project-specific risks; and it ultimately supports robust financial planning and resource allocation. By streamlining these critical analyses, the calculator empowers you to make more confident, data-driven investment decisions that align with your strategic financial goals."
+    },
+    {
+      "heading": "How the calculation works",
+      "body": "The core of this calculator lies in its ability to compute Net Present Value (NPV), Internal Rate of Return (IRR), and Payback Period, all based on your initial investment, expected annual cash flows, a specified discount rate, the project's duration, and any terminal salvage value.\n\n**Net Present Value (NPV):** NPV is calculated by discounting all future cash flows back to their present value and then subtracting the initial investment. The formula for NPV with constant annual cash flows (C) and a discount rate (r) over 'N' periods, including an initial investment (I0) and a salvage value (S) at the end, is conceptually:\n\nNPV = -I0 + [C / (1+r)^1] + [C / (1+r)^2] + ... + [(C + S) / (1+r)^N]\n\nOur calculator iteratively applies this discounting for each period. The discount rate represents your cost of capital or the minimum acceptable rate of return. A positive NPV indicates that the project is expected to be profitable, generating returns greater than the discount rate, while a negative NPV suggests it might erode value.\n\n**Internal Rate of Return (IRR):** The IRR is a more complex calculation because it's the discount rate that makes the NPV of a project exactly zero. There isn't a simple direct formula to solve for IRR; it must be found through iterative methods, such as the bisection method employed by this calculator. The calculator systematically tests different discount rates until it finds one where the sum of the present values of cash inflows equals the present value of cash outflows (i.e., NPV = 0). The resulting IRR is then expressed as a percentage. If a project's IRR is higher than your company's cost of capital or hurdle rate, it's generally considered an acceptable investment.\n\n**Payback Period:** This metric calculates how long it takes for the cumulative cash inflows from a project to recover the initial investment. Assuming constant annual cash flows, the basic calculation is: Payback Period = Initial Investment / Annual Cash Flow. If there's a salvage value, it contributes to the cash flow in the final period. The calculator tracks the cumulative cash flow over the project's life to determine the exact point at which the initial investment is recouped. If the investment is not fully recovered within the project's specified number of periods, the result will indicate that payback does not occur."
+    },
+    {
+      "heading": "Common mistakes in npv-irr-project-valuation",
+      "body": "While NPV and IRR are powerful tools, their effectiveness heavily relies on the quality of inputs and the correct interpretation of outputs. Several common mistakes can lead to flawed investment decisions:\n\n1.  **Inaccurate Cash Flow Estimation:** This is perhaps the most critical error. Overestimating future revenues or underestimating costs, failing to account for working capital changes, or omitting relevant indirect costs can drastically skew NPV and IRR results. Cash flows should be incremental (only those directly attributable to the project), after-tax, and include all relevant inflows and outflows, including the salvage value at the end of the project's life.\n\n2.  **Incorrect Discount Rate Selection:** Choosing an inappropriate discount rate (cost of capital or hurdle rate) can fundamentally alter the perceived profitability. A discount rate that is too low will make projects appear more attractive than they are, while one that is too high will unfairly penalize potentially good projects. The discount rate should reflect the riskiness of the project and the company's weighted average cost of capital (WACC).\n\n3.  **Misinterpreting IRR with Mutually Exclusive Projects:** IRR implicitly assumes that intermediate cash flows are reinvested at the IRR itself. For projects with very different IRRs, this assumption might be unrealistic. For mutually exclusive projects (where you can only choose one), NPV is generally a better criterion because it directly measures the absolute increase in wealth, which is often more relevant than a percentage return, especially for projects of different scales.\n\n4.  **Ignoring Non-Financial Factors:** NPV and IRR focus purely on financial metrics. They don't account for strategic benefits, environmental impact, social responsibility, market positioning, or qualitative risks that can be crucial to a project's overall success. A comprehensive evaluation requires considering both quantitative and qualitative aspects.\n\n5.  **Assuming Constant Cash Flows When They Vary:** Our calculator provides a simplified model with constant annual cash flows for ease of use. However, many real-world projects have varying cash flows year by year. If your project's cash flows are not constant, using an average or constant value will lead to an approximation. For precise calculations with variable cash flows, each period's unique cash flow must be individually discounted.\n\n6.  **Issues with Multiple IRRs or No IRR:** For projects with unconventional cash flow patterns (e.g., an initial outflow, then inflows, then another outflow), it's possible to have multiple IRRs or no real IRR. This makes the IRR metric unreliable in such cases, reinforcing the preference for NPV.\n\nBy being aware of these common pitfalls and using the calculator as a tool for initial analysis and comparison, rather than the sole decision-maker, you can significantly enhance the quality of your capital budgeting process."
+    }
+  ]
+}
