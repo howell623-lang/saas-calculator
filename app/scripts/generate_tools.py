@@ -16,9 +16,17 @@ import random
 import re
 import sys
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any, Dict, Iterable, List
+from typing import Any, Dict, Iterable, List, Optional
+from xml.etree import ElementTree as ET
+
+try:
+    import requests
+
+    HAS_REQUESTS = True
+except ImportError:
+    HAS_REQUESTS = False
 
 # ---- compat for Python < 3.10 (packages_distributions) ----
 try:
@@ -43,6 +51,40 @@ except ImportError:
 ROOT = Path(__file__).resolve().parents[1]
 TOOLS_DIR = ROOT / "data" / "tools"
 LOG_FILE = ROOT / "data" / "tool_generation_log.csv"
+TRENDING_FEED_URL = os.environ.get(
+    "TRENDING_FEED_URL",
+    "https://news.google.com/rss?hl=en-US&gl=US&ceid=US:en",
+)
+
+CATEGORY_KEYWORDS: Dict[str, List[str]] = {
+    "finance": [
+        "loan",
+        "mortgage",
+        "investment",
+        "market",
+        "bank",
+        "tax",
+        "credit",
+        "budget",
+    ],
+    "health": [
+        "health",
+        "hospital",
+        "medical",
+        "cancer",
+        "virus",
+        "diet",
+        "fitness",
+        "heart",
+    ],
+    "climate": ["climate", "heat", "storm", "weather", "temperature", "drought"],
+    "energy": ["energy", "solar", "wind", "fuel", "power", "oil"],
+    "construction": ["housing", "construction", "roof", "building", "concrete", "floor"],
+    "technology": ["ai", "chip", "software", "device", "tech", "digital"],
+    "education": ["school", "college", "education", "student", "tuition"],
+    "lifestyle": ["travel", "nutrition", "wedding", "family", "pet", "garden"],
+    "sports": ["game", "team", "tournament", "player", "score", "olympic"],
+}
 TOOLS_DIR.mkdir(parents=True, exist_ok=True)
 
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
@@ -50,6 +92,14 @@ MODEL_NAME = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
 
 
 # ---------- Data model ----------
+@dataclass
+class TopicIdea:
+    slug: str
+    prompt: str
+    category: Optional[str] = None
+    source: Optional[str] = None
+
+
 @dataclass
 class ToolConfig:
     slug: str
@@ -123,17 +173,128 @@ def append_log(slug: str, title: str, path: Path) -> None:
         fh.write(f"{datetime.utcnow().isoformat(timespec='seconds')}Z,{slug},{title},{path}\n")
 
 
+def categorize_topic(text: str) -> str:
+    lowered = text.lower()
+    words = set(re.findall(r"[a-z0-9]+", lowered))
+    for category, keywords in CATEGORY_KEYWORDS.items():
+        for keyword in keywords:
+            keyword_lower = keyword.lower()
+            if " " in keyword_lower:
+                if keyword_lower in lowered:
+                    return category
+            elif keyword_lower in words:
+                return category
+    return "general"
+
+
+def fetch_trending_topics(limit: int = 20) -> List[Dict[str, str]]:
+    if not HAS_REQUESTS:
+        print("Warning: requests is not installed; skipping trending fetch.")
+        return []
+    try:
+        response = requests.get(TRENDING_FEED_URL, timeout=15)
+        response.raise_for_status()
+    except Exception as exc:
+        print(f"Warning: unable to fetch trending feed ({exc})")
+        return []
+    try:
+        root = ET.fromstring(response.text)
+    except ET.ParseError as exc:
+        print(f"Warning: unable to parse trending feed ({exc})")
+        return []
+
+    topics: List[Dict[str, str]] = []
+    for item in root.findall(".//item"):
+        title = (item.findtext("title") or "").strip()
+        description = (item.findtext("description") or "").strip()
+        if not title:
+            continue
+        combined = f"{title} {description}".strip()
+        category = categorize_topic(combined)
+        topics.append({"title": title, "category": category})
+        if len(topics) >= limit:
+            break
+    return topics
+
+
+def build_trend_context(topics: Iterable[Dict[str, str]]) -> str:
+    lines = [f"- {item['title']} (category: {item['category']})" for item in topics]
+    return "\n".join(lines)
+
+
+def load_recent_slugs(days: int = 14) -> set[str]:
+    if not LOG_FILE.exists():
+        return set()
+    cutoff = datetime.utcnow() - timedelta(days=days)
+    recent: set[str] = set()
+    with LOG_FILE.open("r", encoding="utf-8") as fh:
+        header_skipped = False
+        for line in fh:
+            if not header_skipped:
+                header_skipped = True
+                if line.lower().startswith("timestamp_utc"):
+                    continue
+            parts = line.strip().split(",")
+            if len(parts) < 2:
+                continue
+            timestamp_raw, slug = parts[0], parts[1]
+            ts_clean = timestamp_raw.rstrip("Z")
+            dt: datetime | None = None
+            for fmt in ("%Y-%m-%dT%H:%M:%S", "%Y-%m-%d %H:%M:%S"):
+                try:
+                    dt = datetime.strptime(ts_clean, fmt)
+                    break
+                except ValueError:
+                    continue
+            if not dt:
+                try:
+                    dt = datetime.fromisoformat(ts_clean)
+                except ValueError:
+                    continue
+            if dt >= cutoff:
+                recent.add(slug)
+    return recent
+
+
 # ---------- Content generation ----------
-def plan_topics_with_gemini(api_key: str, plan_count: int, niches: str) -> List[str]:
+def plan_topics_with_gemini(
+    api_key: str,
+    plan_count: int,
+    niches: str,
+    trends: Optional[List[Dict[str, str]]] = None,
+    recent_slugs: Optional[set[str]] = None,
+) -> List[TopicIdea]:
     if not HAS_GENAI:
         return []
     genai.configure(api_key=api_key)
-    prompt = f"""Act as a market research agent for calculator tools.
-First, list 10 niche micro-tool markets where Google AdSense CPC is high but search competition is low.
-Then, pick ONE best domain among these: {niches}.
-Now RETURN ONLY JSON ARRAY (no prose) of {plan_count} calculator ideas (short slugs/titles), focusing on high-need formulas (not trivial multipliers).
-Example: ["solar-array-sizing","heat-loss-room","duct-static-pressure"]
-JSON only, nothing else."""
+    trend_context = build_trend_context((trends or [])[:12]) if trends else ""
+    avoid_list = sorted(list(recent_slugs))[:20] if recent_slugs else []
+    avoid_text = ", ".join(avoid_list)
+    trend_clause = (
+        "Trending research observed today (use as inspiration, do not simply repeat headlines):\n"
+        f"{trend_context}\n"
+        "Ensure you cover at least four distinct categories across climate, health, construction, energy, lifestyle, tech, education, and finance."
+        if trend_context
+        else ""
+    )
+    avoid_clause = f"Avoid slugs already built recently: {avoid_text}." if avoid_text else ""
+    prompt = f"""You are an editor planning tomorrow's batch of niche calculator tools.
+Preferred niches to lean on: {niches}.
+{trend_clause}
+{avoid_clause}
+
+Return ONLY a JSON array of {plan_count} objects. Each object must contain:
+- slug: URL-friendly string
+- title: human-friendly calculator idea name
+- category: one of finance, health, climate, energy, construction, technology, education, lifestyle, sports, general
+- inspiration: short phrase explaining how this relates to the trending topic or evergreen demand
+- summary: one sentence describing the calculation focus
+
+Constraints:
+- No more than two ideas per category.
+- Include at least one non-finance idea.
+- Each calculator must be formula-heavy (multi-step logic, not a single multiplication).
+- JSON only, no commentary."""
     model = genai.GenerativeModel(MODEL_NAME)
     try:
         response = model.generate_content(prompt, request_options={"timeout": 60})
@@ -147,11 +308,35 @@ JSON only, nothing else."""
         topics = json.loads(cleaned)
         if not isinstance(topics, list):
             raise ValueError("Plan result is not a list")
-        return [sanitize_slug(str(t)) for t in topics][:plan_count]
+        ideas: List[TopicIdea] = []
+        for raw in topics:
+            if isinstance(raw, str):
+                slug = sanitize_slug(raw)
+                ideas.append(TopicIdea(slug=slug, prompt=raw))
+                continue
+            if isinstance(raw, dict):
+                slug_source = raw.get("slug") or raw.get("title") or raw.get("idea") or raw.get("topic")
+                if not slug_source:
+                    continue
+                slug = sanitize_slug(slug_source)
+                title = raw.get("title") or slug_source
+                category = raw.get("category") or raw.get("domain")
+                inspiration = raw.get("inspiration") or raw.get("trend")
+                summary = raw.get("summary") or raw.get("details")
+                prompt_parts = [title]
+                if category:
+                    prompt_parts.append(f"Category: {category}")
+                if inspiration:
+                    prompt_parts.append(f"Inspired by: {inspiration}")
+                if summary:
+                    prompt_parts.append(summary)
+                prompt_text = " | ".join(prompt_parts)
+                ideas.append(TopicIdea(slug=slug, prompt=prompt_text, category=category, source=inspiration))
+        return ideas[:plan_count]
     except Exception:
         # fallback: extract bullet/line items
         lines = [
-            sanitize_slug(m.group(1))
+            TopicIdea(slug=sanitize_slug(m.group(1)), prompt=m.group(1))
             for m in re.finditer(r"^[\-\*\d\.\)]\s*(.+)$", text, flags=re.MULTILINE)
             if m.group(1)
         ]
@@ -292,12 +477,12 @@ def generate_offline_tool(slug: str) -> ToolConfig:
 
 
 # ---------- CLI ----------
-def iter_topics_from_file(path: Path) -> Iterable[str]:
+def iter_topics_from_file(path: Path) -> Iterable[TopicIdea]:
     with path.open("r", encoding="utf-8") as fh:
         for line in fh:
             topic = line.strip()
             if topic:
-                yield topic
+                yield TopicIdea(slug=sanitize_slug(topic), prompt=topic)
 
 
 def main(argv: List[str] | None = None) -> int:
@@ -308,6 +493,11 @@ def main(argv: List[str] | None = None) -> int:
     parser.add_argument("--log", action="store_true", help="Append CSV log.")
     parser.add_argument("--shuffle", action="store_true", help="Shuffle topics.")
     parser.add_argument("--strategy", action="store_true", help="Use strategy planning via Gemini.")
+    parser.add_argument(
+        "--use-trending",
+        action="store_true",
+        help="Fetch trending topics online and force diverse domains for strategy mode.",
+    )
     parser.add_argument("--plan-count", type=int, default=10, help="Topics to request in strategy.")
     parser.add_argument("--niches", type=str, default="gardening, finance, health", help="Comma-separated niches.")
     parser.add_argument("--force", action="store_true", help="Overwrite existing file if exists.")
@@ -318,12 +508,23 @@ def main(argv: List[str] | None = None) -> int:
     if not args.topic and not args.topics_file and not args.strategy:
         parser.error("Provide --topic or --topics-file or --strategy")
 
-    topics: List[str] = []
+    topics: List[TopicIdea] = []
     api_key = GEMINI_API_KEY
     use_mock = args.mock or not (api_key and HAS_GENAI)
+    recent_slugs = load_recent_slugs()
+    trend_data: List[Dict[str, str]] = []
+    if args.use_trending:
+        trend_limit = max(args.plan_count * 2, 10)
+        trend_data = fetch_trending_topics(limit=trend_limit)
 
     if args.strategy and not use_mock:
-        topics = plan_topics_with_gemini(api_key, args.plan_count, args.niches)
+        topics = plan_topics_with_gemini(
+            api_key,
+            args.plan_count,
+            args.niches,
+            trends=trend_data or None,
+            recent_slugs=recent_slugs or None,
+        )
         if args.shuffle:
             random.shuffle(topics)
         if not topics:
@@ -340,20 +541,29 @@ def main(argv: List[str] | None = None) -> int:
             if args.shuffle:
                 random.shuffle(topics)
     if not topics and args.topic:
-        topics = [args.topic]
+        topics = [TopicIdea(slug=sanitize_slug(args.topic), prompt=args.topic)]
+    if not topics and trend_data:
+        topics = [
+            TopicIdea(
+                slug=sanitize_slug(item["title"]),
+                prompt=f"{item['title']} calculator inspired by breaking news",
+                category=item.get("category"),
+            )
+            for item in trend_data
+        ][: args.plan_count]
 
     generated = 0
     for topic in topics:
         if generated >= args.max_per_day:
             print(f"Reached daily cap ({args.max_per_day}), stopping.")
             break
-        slug = sanitize_slug(args.slug or topic)
+        slug = sanitize_slug(args.slug or topic.slug)
         tool: ToolConfig | None = None
         if not use_mock:
             try:
-                tool = generate_with_gemini(topic, api_key)  # type: ignore[arg-type]
+                tool = generate_with_gemini(topic.prompt, api_key)  # type: ignore[arg-type]
             except Exception as e:
-                print(f"❌ Error on {topic}: {e}")
+                print(f"❌ Error on {topic.prompt}: {e}")
                 tool = None
         if not tool:
             tool = generate_offline_tool(slug)

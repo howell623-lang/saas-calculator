@@ -37,15 +37,15 @@ python scripts/generate_tools.py --topic "aquarium salinity" --mock
 # set GEMINI_API_KEY and drop --mock to use Gemini (requires google-generativeai)
 ```
 
-Flags: `--slug` to override slug, `--force` to overwrite existing files.
+Flags: `--slug` to override slug, `--force` to overwrite existing files. `--use-trending` hits the Google News RSS feed (or `TRENDING_FEED_URL`) to seed hot topics, forcing Gemini to rotate into new domains. Install `requests` (in addition to `google-generativeai`) for the trending fetch.
 
 ### Daily automation
 
-- Topics seed: `scripts/topics.txt` (one topic per line). Strategy mode can auto-plan topics via Gemini.
+- Topics seed: `scripts/topics.txt` (one topic per line). Strategy mode can auto-plan topics via Gemini, and `--use-trending` keeps the daily batch aligned with whatever is spiking online.
 - One-command daily run (requires `GEMINI_API_KEY`): `npm run generate:daily` (defaults to strategy, 20 per day)
 - Mock demo (10 items): `npm run generate:mock`
 - Daily cap/logging: controlled via `scripts/run_daily.sh` (env `MAX_PER_DAY`, `TOPICS_FILE`, `MOCK=true/false`), uses `--shuffle` by default.
-- Log file: `data/tool_generation_log.csv` keeps timestamp/slug/title/path.
+- Log file: `data/tool_generation_log.csv` keeps timestamp/slug/title/path and is used to avoid repeating recent slugs when planning.
 
 GitHub Actions (optional):
 - Workflow: `.github/workflows/daily-generate.yml`
