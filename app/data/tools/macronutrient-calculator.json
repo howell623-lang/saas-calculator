@@ -1,0 +1,167 @@
+{
+  "slug": "macronutrient-calculator",
+  "title": "Macronutrient Calculator",
+  "seo": {
+    "title": "Macronutrient Calculator for Personalized Health & Fitness Goals",
+    "description": "Calculate your target daily grams for protein, fats, and carbohydrates based on activity, body metrics, and dietary goals. Optimize your nutrition with a personalized plan."
+  },
+  "inputs": [
+    {
+      "id": "gender",
+      "label": "Gender",
+      "type": "text",
+      "placeholder": "Male or Female",
+      "required": true,
+      "options": [
+        "Male",
+        "Female"
+      ]
+    },
+    {
+      "id": "age",
+      "label": "Age",
+      "type": "number",
+      "placeholder": "e.g., 30",
+      "required": true,
+      "step": 1
+    },
+    {
+      "id": "weight_lbs",
+      "label": "Weight (lbs)",
+      "type": "number",
+      "placeholder": "e.g., 150",
+      "required": true,
+      "step": 0.1
+    },
+    {
+      "id": "height_feet",
+      "label": "Height (feet)",
+      "type": "number",
+      "placeholder": "e.g., 5",
+      "required": true,
+      "step": 1
+    },
+    {
+      "id": "height_inches",
+      "label": "Height (inches)",
+      "type": "number",
+      "placeholder": "e.g., 9",
+      "required": true,
+      "step": 1
+    },
+    {
+      "id": "activity_level",
+      "label": "Activity Level",
+      "type": "text",
+      "placeholder": "Select your activity level",
+      "required": true,
+      "options": [
+        "Sedentary (little to no exercise)",
+        "Lightly Active (light exercise/sports 1-3 days/week)",
+        "Moderately Active (moderate exercise/sports 3-5 days/week)",
+        "Very Active (hard exercise/sports 6-7 days/week)",
+        "Extremely Active (very hard exercise/physical job)"
+      ]
+    },
+    {
+      "id": "goal",
+      "label": "Dietary Goal",
+      "type": "text",
+      "placeholder": "Select your goal",
+      "required": true,
+      "options": [
+        "Maintain Weight",
+        "Lose Weight",
+        "Gain Weight"
+      ]
+    }
+  ],
+  "outputs": [
+    {
+      "id": "total_calories",
+      "label": "Target Daily Calories",
+      "unit": "kcal",
+      "precision": 0
+    },
+    {
+      "id": "protein_grams",
+      "label": "Protein",
+      "unit": "grams",
+      "precision": 0
+    },
+    {
+      "id": "fat_grams",
+      "label": "Fats",
+      "unit": "grams",
+      "precision": 0
+    },
+    {
+      "id": "carb_grams",
+      "label": "Carbohydrates",
+      "unit": "grams",
+      "precision": 0
+    }
+  ],
+  "formula": "function calculateMacros(inputs) {\n  const gender = inputs.gender.toLowerCase();\n  const age = parseFloat(inputs.age);\n  const weight_lbs = parseFloat(inputs.weight_lbs);\n  const height_feet = parseFloat(inputs.height_feet);\n  const height_inches = parseFloat(inputs.height_inches);\n  const activity_level = inputs.activity_level.toLowerCase();\n  const goal = inputs.goal.toLowerCase();\n\n  // Input validation (basic)\n  if (isNaN(age) || isNaN(weight_lbs) || isNaN(height_feet) || isNaN(height_inches) || age <= 0 || weight_lbs <= 0 || height_feet < 0 || height_inches < 0) {\n    throw new Error('Please enter valid positive numbers for age, weight, and height.');\n  }\n  if (!['male', 'female'].includes(gender)) {\n    throw new Error('Gender must be Male or Female.');\n  }\n\n  // Convert weight to kg and height to cm\n  const weight_kg = weight_lbs * 0.453592;\n  const total_height_inches = (height_feet * 12) + height_inches;\n  const height_cm = total_height_inches * 2.54;\n\n  // 1. Calculate BMR (Basal Metabolic Rate) using Mifflin-St Jeor Equation\n  let bmr;\n  if (gender === 'male') {\n    bmr = (10 * weight_kg) + (6.25 * height_cm) - (5 * age) + 5;\n  } else {\n    bmr = (10 * weight_kg) + (6.25 * height_cm) - (5 * age) - 161;\n  }\n\n  // 2. Determine Activity Multiplier\n  let activity_multiplier;\n  if (activity_level.includes('sedentary')) {\n    activity_multiplier = 1.2;\n  } else if (activity_level.includes('lightly active')) {\n    activity_multiplier = 1.375;\n  } else if (activity_level.includes('moderately active')) {\n    activity_multiplier = 1.55;\n  } else if (activity_level.includes('very active')) {\n    activity_multiplier = 1.725;\n  } else if (activity_level.includes('extremely active')) {\n    activity_multiplier = 1.9;\n  } else {\n    activity_multiplier = 1.55; // Default to moderately active if somehow not matched\n  }\n\n  // 3. Calculate TDEE (Total Daily Energy Expenditure)\n  let tdee = bmr * activity_multiplier;\n\n  // 4. Adjust TDEE based on Goal\n  let target_calories;\n  if (goal === 'maintain weight') {\n    target_calories = tdee;\n  } else if (goal === 'lose weight') {\n    target_calories = tdee * 0.80; // 20% caloric deficit\n    target_calories = Math.max(1200, target_calories); // Cap minimum calories for health and safety\n  } else if (goal === 'gain weight') {\n    target_calories = tdee * 1.10; // 10% caloric surplus\n  } else {\n    target_calories = tdee; // Default to maintain if not matched\n  }\n\n  // 5. Macronutrient Allocation\n  // Protein: 0.8-1.0g per pound of body weight for active individuals\n  // Using 0.9g/lb for a general recommendation. Ensure a minimum of 50g.\n  let protein_grams = weight_lbs * 0.9;\n  protein_grams = Math.max(50, protein_grams); \n  const protein_calories = protein_grams * 4; // 4 kcal/gram\n\n  // Fats: Aim for 25% of total calories. Ensure a minimum of 30g for hormonal health.\n  const min_fat_calories_for_health = 30 * 9; // 30g * 9 kcal/gram\n  let fat_calories = target_calories * 0.25;\n  let fat_grams = fat_calories / 9;\n\n  // Carbs: Remaining calories\n  let carb_calories = target_calories - protein_calories - (fat_grams * 9);\n  let carb_grams = carb_calories / 4; // 4 kcal/gram\n\n  // Conditional adjustment: If carbs are negative, re-adjust fat down to make space, but respect fat minimum.\n  if (carb_grams < 0) {\n    const needed_fat_reduction_calories = -carb_calories;\n    // Reduce fat calories, but not below the minimum required for health.\n    fat_calories = Math.max(min_fat_calories_for_health, fat_calories - needed_fat_reduction_calories);\n    fat_grams = fat_calories / 9;\n    \n    // Recalculate carb calories after fat adjustment\n    carb_calories = target_calories - protein_calories - (fat_grams * 9);\n    carb_grams = Math.max(0, carb_calories / 4); // Ensure non-negative after re-calculation\n  }\n\n  // Final check to ensure protein and fat don't exceed target calories significantly if a very low target is set\n  // This can happen if target_calories is extremely low, and the fixed protein/fat minimums are relatively high.\n  // In such cases, we prioritize protein, then fat, then carbs.\n  const current_total_macro_calories = protein_calories + (fat_grams * 9) + (carb_grams * 4);\n  if (current_total_macro_calories > target_calories && carb_grams === 0) {\n      // If carbs are already at 0 and total calories are still over, adjust fat down to meet target\n      const excess_calories = current_total_macro_calories - target_calories;\n      let new_fat_calories = (fat_grams * 9) - excess_calories;\n      new_fat_calories = Math.max(min_fat_calories_for_health, new_fat_calories);\n      fat_grams = new_fat_calories / 9;\n  }\n\n  return {\n    total_calories: target_calories,\n    protein_grams: protein_grams,\n    fat_grams: fat_grams,\n    carb_grams: carb_grams\n  };\n}",
+  "summary": "Calculates target daily grams for protein, fats, and carbohydrates based on individual activity levels, body metrics, and dietary objectives.",
+  "cta": "Calculate Your Personalized Macronutrients",
+  "faq": [
+    {
+      "q": "What are macronutrients?",
+      "a": "Macronutrients, often shortened to 'macros,' are the three primary components of food that the body needs in large amounts for energy and to maintain its structure and systems: protein, carbohydrates, and fats. Each plays a distinct and vital role in your health and physical performance."
+    },
+    {
+      "q": "Why is it important to track macronutrients?",
+      "a": "Tracking macros helps you align your food intake precisely with your health and fitness goals, whether that's losing weight, building muscle, or maintaining your current physique. It ensures you're getting adequate protein for muscle repair, healthy fats for hormone production, and carbohydrates for energy, rather than just focusing on total calories."
+    },
+    {
+      "q": "How accurate is this macronutrient calculator?",
+      "a": "This calculator uses scientifically recognized formulas (like Mifflin-St Jeor for BMR) and general nutrition guidelines to provide an estimated starting point. While it offers a personalized recommendation based on your inputs, individual metabolic rates can vary. It's a powerful tool, but for highly precise or medical-specific guidance, consult a registered dietitian or healthcare professional."
+    },
+    {
+      "q": "What's the difference between BMR and TDEE?",
+      "a": "BMR (Basal Metabolic Rate) is the minimum amount of energy your body needs to perform basic functions (like breathing, circulation, cell production) at rest. TDEE (Total Daily Energy Expenditure) is your BMR plus the calories you burn through all daily activities, including exercise, digestion, and non-exercise movement. TDEE represents the total calories you burn in a day."
+    },
+    {
+      "q": "Can I use this calculator for specific diets (e.g., Keto, Vegan)?",
+      "a": "While the calculator provides general macro targets, it doesn't automatically adjust for specific dietary restrictions like ketogenic (very low carb) or vegan (plant-based). You can use the calculated total calories as a base and then manually adjust the macro ratios to fit your specific diet while ensuring you meet protein and fat minimums and stay within your calorie goal."
+    },
+    {
+      "q": "How often should I recalculate my macros?",
+      "a": "You should recalculate your macros whenever your body metrics (weight, body fat percentage) or activity level significantly change, or if your dietary goals shift. For weight loss or gain, recalculating every 4-6 weeks can help ensure your targets remain aligned with your progress and current body composition."
+    },
+    {
+      "q": "What if I don't know my body fat percentage?",
+      "a": "This calculator does not require body fat percentage as an input, relying on total body weight for its calculations. While body fat percentage can lead to more precise calculations (especially for lean body mass-based protein targets), this calculator provides a solid general estimate. If you have a very high body fat percentage, your protein per pound of total body weight might be slightly overestimated for lean mass, but it still provides a safe and effective starting point."
+    }
+  ],
+  "tags": [
+    "nutrition",
+    "fitness",
+    "health",
+    "diet",
+    "macros",
+    "weight loss",
+    "muscle gain",
+    "meal planning"
+  ],
+  "related": [
+    "calorie-calculator",
+    "bmi-calculator",
+    "ideal-weight-calculator"
+  ],
+  "article": [
+    {
+      "heading": "Why use this Macronutrient Calculator | Category: health | Inspired by: Personalized nutrition planning for fitness and health goals. | Calculates target daily grams for protein, fats, and carbohydrates based on individual activity levels, body metrics, and dietary objectives.?",
+      "body": "In the vast and often confusing world of nutrition, generic diet advice often falls short because it fails to account for one crucial factor: you. Your body is unique, with distinct needs based on your age, gender, weight, height, activity level, and specific health and fitness goals. This is where a personalized approach to nutrition, guided by tools like the Macronutrient Calculator, becomes indispensable.\n\nThis calculator empowers you to move beyond generalized recommendations and pinpoint the precise daily intake of protein, fats, and carbohydrates your body requires. Whether your objective is to shed stubborn pounds, build lean muscle mass, or simply maintain a healthy weight and optimize overall well-being, understanding your macronutrient targets is the cornerstone of effective dietary planning.\n\nProtein is vital for muscle repair and growth, enzyme production, and satiety. Fats are essential for hormone production, nutrient absorption, and long-term energy. Carbohydrates are your body's primary source of energy, fueling your workouts and daily activities. A balanced intake of all three, tailored to your individual profile, ensures your body has the building blocks and fuel it needs to perform optimally. Without this personalized insight, you might inadvertently consume too much of one macro and too little of another, hindering your progress and potentially impacting your health. This calculator serves as your personal nutritionist, translating complex science into actionable, easy-to-understand daily targets, paving the way for sustainable and successful dietary habits."
+    },
+    {
+      "heading": "How the calculation works",
+      "body": "The Macronutrient Calculator utilizes a multi-step, scientifically-backed process to determine your personalized daily macro targets. It begins by establishing your Basal Metabolic Rate (BMR), which is the number of calories your body burns at rest to maintain vital functions like breathing, circulation, and organ function. This calculator employs the Mifflin-St Jeor Equation, a widely accepted and accurate formula that considers your gender, age, weight, and height to calculate your BMR.\n\nOnce your BMR is determined, the calculator then factors in your daily activity level to calculate your Total Daily Energy Expenditure (TDEE). TDEE represents the total number of calories you burn throughout the day, including your BMR, exercise, and non-exercise activity. An activity multiplier, ranging from 'sedentary' (1.2) to 'extremely active' (1.9), is applied to your BMR to arrive at your TDEE. This step is critical because someone with an office job and no exercise will have vastly different caloric needs than a construction worker who trains daily.\n\nFinally, your TDEE is adjusted based on your specific dietary goal. If you aim to 'Maintain Weight,' your target daily calories will be your TDEE. For 'Lose Weight,' a moderate caloric deficit (typically 20% below TDEE, with a health-conscious minimum floor) is applied to encourage fat loss. Conversely, for 'Gain Weight' (muscle mass), a slight caloric surplus (around 10% above TDEE) is added to provide the energy needed for muscle anabolism.\n\nWith your personalized target daily calorie intake established, the calculator then allocates these calories into optimal proportions of protein, fats, and carbohydrates. Protein targets are often set based on body weight (e.g., around 0.9 grams per pound for active individuals) to support muscle health. Fats typically comprise 20-30% of your total calories, essential for hormonal balance and overall health. The remaining calories are then allocated to carbohydrates, providing the necessary energy for daily activities and workouts. This systematic approach ensures that your macro targets are not arbitrary but are carefully derived from your unique physiological profile and objectives."
+    },
+    {
+      "heading": "Common mistakes in Macronutrient Calculator | Category: health | Inspired by: Personalized nutrition planning for fitness and health goals. | Calculates target daily grams for protein, fats, and carbohydrates based on individual activity levels, body metrics, and dietary objectives.",
+      "body": "While a macronutrient calculator is a powerful tool, its effectiveness hinges on accurate usage and a nuanced understanding of its output. Avoiding common pitfalls can significantly enhance your results and ensure a healthier journey.\n\n**1. Inaccurate Input Data:** The most frequent mistake is entering incorrect information. An underestimated activity level, an outdated weight, or misjudged height will lead to an incorrect BMR and TDEE, rendering your macro targets inaccurate. Be honest and precise. If unsure about activity, it's safer to start lower and adjust.\n\n**2. Not Adjusting Macros Over Time:** Your body is dynamic. As you lose weight, gain muscle, or change your workout routine, your metabolic needs will change. Regularly re-evaluating and recalculating your macros (e.g., every 4-6 weeks) is crucial to ensure your nutrition plan remains aligned with your evolving body and goals. Sticking rigidly to initial numbers indefinitely leads to stalled progress.\n\n**3. Ignoring Micronutrients and Food Quality:** Focusing solely on hitting your macro numbers without considering the source of your food is a major oversight. 100 grams of protein from processed food isn't the same as from whole foods. Prioritize whole, unprocessed foods rich in vitamins, minerals, and fiber. Macros tell you quantity; food quality tells you health impact.\n\n**4. Expecting Instant Results and Lack of Patience:** Nutritional changes take time. It's easy to get discouraged if you don't see drastic changes within a week or two. Consistency is key. Adhere to your targets diligently for several weeks before evaluating. Progress photos, measurements, and energy levels are often more telling than just the scale.\n\n**5. Extreme Caloric Deficits or Surpluses:** While the calculator incorporates deficit/surplus for weight goals, pushing these too far manually is risky. Overly aggressive deficits can lead to nutrient deficiencies, muscle loss, and metabolic adaptation. Excessive surpluses for bulking can lead to unnecessary fat gain. Sustainable progress comes from moderate, consistent adjustments.\n\n**6. Misinterpreting 'Grams Per Pound' Context:** This calculator uses total body weight for simplicity in protein recommendations. For very advanced tracking, especially in individuals with high body fat, protein is sometimes calculated based on 'lean body mass' (LBM). For general fitness and health, the total body weight approach here provides a robust and easy-to-implement starting point."
+    }
+  ]
+}
