@@ -222,6 +222,86 @@ def build_trend_context(topics: Iterable[Dict[str, str]]) -> str:
     return "\n".join(lines)
 
 
+def diversify_topics(
+    ideas: List[TopicIdea],
+    plan_count: int,
+    trends: Optional[List[Dict[str, str]]] = None,
+    min_categories: int = 4,
+    max_per_category: int = 2,
+) -> List[TopicIdea]:
+    """
+    Apply hard caps per category and backfill with trending items so daily runs
+    are not dominated by a single domain (e.g., finance).
+    """
+    selected: List[TopicIdea] = []
+    category_counts: Dict[str, int] = {}
+    seen_slugs: set[str] = set()
+
+    def consider(raw: TopicIdea) -> None:
+        if len(selected) >= plan_count:
+            return
+        category = raw.category or categorize_topic(raw.prompt)
+        if category_counts.get(category, 0) >= max_per_category:
+            return
+        slug = sanitize_slug(raw.slug)
+        if slug in seen_slugs:
+            return
+        seen_slugs.add(slug)
+        category_counts[category] = category_counts.get(category, 0) + 1
+        selected.append(TopicIdea(slug=slug, prompt=raw.prompt, category=category, source=raw.source))
+
+    for idea in ideas:
+        consider(idea)
+        if len(selected) >= plan_count:
+            break
+
+    if trends:
+        # First, add categories we do not yet have to reach diversity minimum.
+        for item in trends:
+            if len(selected) >= plan_count:
+                break
+            if len(category_counts) >= min_categories and min_categories > 0:
+                break
+            category = item.get("category") or categorize_topic(item.get("title", ""))
+            if category in category_counts:
+                continue
+            slug = sanitize_slug(item.get("title", "trend-topic"))
+            prompt = f"{item.get('title', 'Trending topic')} calculator inspired by current news"
+            consider(TopicIdea(slug=slug, prompt=prompt, category=category, source="trend"))
+
+        # If we still have capacity, fill remaining slots with other trending items respecting caps.
+        for item in trends:
+            if len(selected) >= plan_count:
+                break
+            category = item.get("category") or categorize_topic(item.get("title", ""))
+            slug = sanitize_slug(item.get("title", "trend-topic"))
+            prompt = f"{item.get('title', 'Trending topic')} calculator inspired by current news"
+            consider(TopicIdea(slug=slug, prompt=prompt, category=category, source="trend"))
+
+    # If we are still short because of strict caps, allow existing categories up to the plan_count.
+    if len(selected) < plan_count:
+        overflow: List[TopicIdea] = []
+        for idea in ideas:
+            slug = sanitize_slug(idea.slug)
+            if slug in seen_slugs:
+                continue
+            overflow.append(
+                TopicIdea(
+                    slug=slug,
+                    prompt=idea.prompt,
+                    category=idea.category or categorize_topic(idea.prompt),
+                    source=idea.source,
+                )
+            )
+        for idea in overflow:
+            if len(selected) >= plan_count:
+                break
+            selected.append(idea)
+            seen_slugs.add(idea.slug)
+
+    return selected[:plan_count]
+
+
 def load_recent_slugs(days: int = 14) -> set[str]:
     if not LOG_FILE.exists():
         return set()
@@ -499,7 +579,12 @@ def main(argv: List[str] | None = None) -> int:
         help="Fetch trending topics online and force diverse domains for strategy mode.",
     )
     parser.add_argument("--plan-count", type=int, default=10, help="Topics to request in strategy.")
-    parser.add_argument("--niches", type=str, default="gardening, finance, health", help="Comma-separated niches.")
+    parser.add_argument(
+        "--niches",
+        type=str,
+        default="health, climate, construction, energy, education, technology, lifestyle, sports, finance",
+        help="Comma-separated niches (broad by default to avoid finance-only runs).",
+    )
     parser.add_argument("--force", action="store_true", help="Overwrite existing file if exists.")
     parser.add_argument("--mock", action="store_true", help="Force mock mode (no API calls).")
     parser.add_argument("--slug", help="Optional slug override for single topic.")
@@ -508,6 +593,7 @@ def main(argv: List[str] | None = None) -> int:
     if not args.topic and not args.topics_file and not args.strategy:
         parser.error("Provide --topic or --topics-file or --strategy")
 
+    plan_target = min(args.plan_count, args.max_per_day)
     topics: List[TopicIdea] = []
     api_key = GEMINI_API_KEY
     use_mock = args.mock or not (api_key and HAS_GENAI)
@@ -527,6 +613,14 @@ def main(argv: List[str] | None = None) -> int:
         )
         if args.shuffle:
             random.shuffle(topics)
+        if topics:
+            topics = diversify_topics(
+                topics,
+                plan_count=plan_target,
+                trends=trend_data or None,
+                min_categories=5 if trend_data else 4,
+                max_per_category=2,
+            )
         if not topics:
             print("Strategy returned no topics; falling back to topics file or single topic.")
     if not topics and args.topics_file:
@@ -543,14 +637,21 @@ def main(argv: List[str] | None = None) -> int:
     if not topics and args.topic:
         topics = [TopicIdea(slug=sanitize_slug(args.topic), prompt=args.topic)]
     if not topics and trend_data:
-        topics = [
+        trending_ideas = [
             TopicIdea(
                 slug=sanitize_slug(item["title"]),
                 prompt=f"{item['title']} calculator inspired by breaking news",
                 category=item.get("category"),
             )
             for item in trend_data
-        ][: args.plan_count]
+        ]
+        topics = diversify_topics(
+            trending_ideas,
+            plan_count=plan_target,
+            trends=trend_data or None,
+            min_categories=5,
+            max_per_category=2,
+        )
 
     generated = 0
     for topic in topics:
