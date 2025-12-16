@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AdSlot } from "@/components/ad-slot";
 import { AdsToggle } from "@/components/ads-toggle";
 import { loadAllToolConfigs } from "@/lib/tool-loader";
 import { ToolsDirectory } from "@/components/tools-directory";
@@ -47,6 +48,8 @@ export default function Home() {
           </ul>
         </div>
       </header>
+
+      <AdSlot slotName="home-top" note="Sponsored" />
 
       <ToolsDirectory tools={tools} />
 

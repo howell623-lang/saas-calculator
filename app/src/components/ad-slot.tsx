@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { useAds } from "./ads-context";
 
 const ADS_CLIENT = "ca-pub-1856020780538432";
@@ -17,25 +17,13 @@ declare global {
   }
 }
 
-let adsScriptInjected = false;
-
 export function AdSlot({ slotName = "global", note }: Props) {
   const { adsEnabled } = useAds();
-  const adRef = useRef<HTMLModElement | null>(null);
 
   useEffect(() => {
     if (!adsEnabled) return;
 
-    if (!adsScriptInjected) {
-      const script = document.createElement("script");
-      script.async = true;
-      script.src = "https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js";
-      script.setAttribute("data-ad-client", ADS_CLIENT);
-      document.head.appendChild(script);
-      adsScriptInjected = true;
-    }
-
-    // Push a new ad request when the slot is mounted
+    // Script is loaded globally in layout; push a fill request when enabled.
     try {
       (window.adsbygoogle = window.adsbygoogle || []).push({});
     } catch (err) {
@@ -55,7 +43,6 @@ export function AdSlot({ slotName = "global", note }: Props) {
         data-ad-format="auto"
         data-full-width-responsive="true"
         aria-label={`Ad slot ${slotName}`}
-        ref={adRef}
       />
       {note ? <p className="mt-2 text-xs text-gray-500">{note}</p> : null}
     </div>

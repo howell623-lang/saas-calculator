@@ -116,7 +116,7 @@ export default async function ToolPage({ params }: PageProps) {
       <section className="space-y-6 rounded-3xl bg-white/80 p-8 shadow-lg shadow-gray-200/60 ring-1 ring-gray-100 backdrop-blur-sm">
         <DynamicCalculator config={tool} />
 
-        <AdSlot slotName="below-calculator" note="Place responsive AdSense tag here." />
+        <AdSlot slotName="below-calculator" note="Sponsored" />
       </section>
 
       {tool.faq?.length ? (
