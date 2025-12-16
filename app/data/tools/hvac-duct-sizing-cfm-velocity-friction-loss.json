@@ -1,0 +1,158 @@
+{
+  "slug": "hvac-duct-sizing-cfm-velocity-friction-loss",
+  "title": "HVAC Duct Sizing Calculator (CFM, Velocity, Friction Loss)",
+  "seo": {
+    "title": "HVAC Duct Sizing Calculator | CFM, Velocity, Friction Loss | Optimize HVAC",
+    "description": "Accurately size HVAC ducts for optimal airflow, velocity, and minimal friction loss. Calculate CFM, velocity, and pressure drop for efficient HVAC system design."
+  },
+  "inputs": [
+    {
+      "id": "airflow_cfm",
+      "label": "Desired Airflow (CFM)",
+      "type": "number",
+      "placeholder": "e.g., 800",
+      "required": true,
+      "step": 10
+    },
+    {
+      "id": "target_velocity_fpm",
+      "label": "Target Air Velocity (FPM)",
+      "type": "number",
+      "placeholder": "e.g., 700 (supply) or 500 (return)",
+      "required": true,
+      "step": 50
+    },
+    {
+      "id": "duct_type",
+      "label": "Duct Shape",
+      "type": "text",
+      "placeholder": "round or rectangular",
+      "required": true
+    },
+    {
+      "id": "aspect_ratio",
+      "label": "Aspect Ratio (Width:Height) for Rectangular Ducts",
+      "type": "number",
+      "placeholder": "e.g., 1.0 for square, 2.0 for 2:1 width to height",
+      "required": false,
+      "step": 0.1
+    },
+    {
+      "id": "duct_length_ft",
+      "label": "Duct Run Length (feet)",
+      "type": "number",
+      "placeholder": "e.g., 50",
+      "required": true,
+      "step": 1
+    },
+    {
+      "id": "allowable_friction_loss_per_100ft",
+      "label": "Allowable Friction Loss (in.w.g. per 100 ft)",
+      "type": "number",
+      "placeholder": "e.g., 0.10 (residential) or 0.08 (commercial)",
+      "required": true,
+      "step": 0.001
+    }
+  ],
+  "outputs": [
+    {
+      "id": "equivalent_diameter_inches",
+      "label": "Equivalent Round Duct Diameter",
+      "unit": "in",
+      "precision": 1
+    },
+    {
+      "id": "duct_width_inches",
+      "label": "Rectangular Duct Width",
+      "unit": "in",
+      "precision": 1
+    },
+    {
+      "id": "duct_height_inches",
+      "label": "Rectangular Duct Height",
+      "unit": "in",
+      "precision": 1
+    },
+    {
+      "id": "total_friction_loss_inwg",
+      "label": "Total Friction Loss",
+      "unit": "in.w.g.",
+      "precision": 3
+    },
+    {
+      "id": "actual_velocity_fpm",
+      "label": "Actual Air Velocity",
+      "unit": "FPM",
+      "precision": 0
+    }
+  ],
+  "formula": "const { airflow_cfm, target_velocity_fpm, duct_type, aspect_ratio, duct_length_ft, allowable_friction_loss_per_100ft } = inputs;\n\n// Input validation and default values\nif (airflow_cfm <= 0 || target_velocity_fpm <= 0) {\n    throw new Error('Airflow and target velocity must be positive values.');\n}\n\n// 1. Calculate Required Area\nlet required_duct_area_sqft = airflow_cfm / target_velocity_fpm;\nlet required_duct_area_sqin = required_duct_area_sqft * 144;\n\nlet equivalent_diameter_inches = 0;\nlet duct_width_inches = 0;\nlet duct_height_inches = 0;\n\nconst lowerCaseDuctType = duct_type ? duct_type.toLowerCase() : '';\n\nif (lowerCaseDuctType === 'round') {\n  // For round duct\n  equivalent_diameter_inches = Math.sqrt(required_duct_area_sqin / Math.PI) * 2;\n  // For consistency, set rectangular dimensions to 0 when round is selected\n  duct_width_inches = 0;\n  duct_height_inches = 0;\n} else if (lowerCaseDuctType === 'rectangular') {\n  // Ensure aspect_ratio is provided for rectangular ducts and is reasonable\n  const effective_aspect_ratio = (aspect_ratio && aspect_ratio > 0) ? Math.max(0.25, Math.min(4, aspect_ratio)) : 1.0; // Default to square if not provided or out of range\n\n  duct_height_inches = Math.sqrt(required_duct_area_sqin / effective_aspect_ratio);\n  duct_width_inches = duct_height_inches * effective_aspect_ratio;\n\n  // Calculate equivalent diameter for rectangular duct (for reference/friction loss if needed elsewhere)\n  // Using the common approximation for friction equivalence: De = 2*W*H / (W+H)\n  equivalent_diameter_inches = (2 * duct_width_inches * duct_height_inches) / (duct_width_inches + duct_height_inches);\n\n} else {\n    throw new Error('Please specify duct shape as \"round\" or \"rectangular\".');\n}\n\n// Ensure dimensions are positive (min 1 inch for practical reasons)\nequivalent_diameter_inches = Math.max(1, equivalent_diameter_inches);\nduct_width_inches = Math.max(1, duct_width_inches);\nduct_height_inches = Math.max(1, duct_height_inches);\n\n// 2. Calculate Actual Velocity based on calculated dimensions\nlet actual_area_sqin;\nif (lowerCaseDuctType === 'round') {\n    actual_area_sqin = Math.PI * (equivalent_diameter_inches / 2) ** 2;\n} else {\n    actual_area_sqin = duct_width_inches * duct_height_inches;\n}\nlet actual_velocity_fpm = (airflow_cfm * 144) / actual_area_sqin;\n\n// 3. Calculate Total Friction Loss\n// The input `allowable_friction_loss_per_100ft` is a rate.\nlet total_friction_loss_inwg = (allowable_friction_loss_per_100ft / 100) * duct_length_ft;\n\n// Cap total friction loss to a reasonable maximum for typical HVAC systems\ntotal_friction_loss_inwg = Math.min(2.0, total_friction_loss_inwg); // e.g., max 2.0 in.w.g. for typical systems\n\nreturn {\n  equivalent_diameter_inches,\n  duct_width_inches,\n  duct_height_inches,\n  total_friction_loss_inwg,\n  actual_velocity_fpm\n};",
+  "summary": "Calculate optimal dimensions for HVAC ducts based on desired airflow (CFM), air velocity, and allowable friction loss. Ensure efficient and quiet HVAC system operation while minimizing energy consumption.",
+  "cta": "Calculate Duct Dimensions",
+  "faq": [
+    {
+      "q": "What is CFM in HVAC and why is it important for duct sizing?",
+      "a": "CFM stands for Cubic Feet per Minute, and it measures the volume of air flowing through a duct system. It's crucial for duct sizing because the duct must be large enough to carry the required CFM for proper heating or cooling of a space without excessive velocity or pressure drop. Undersized ducts lead to insufficient airflow, while oversized ducts can result in low velocity and poor air distribution."
+    },
+    {
+      "q": "Why is target air velocity important when sizing HVAC ducts?",
+      "a": "Target air velocity dictates the speed at which air moves through the ducts. High velocities can lead to excessive noise, vibrations, and increased friction loss, requiring more energy from the fan. Low velocities can result in stratification of air, poor air distribution, and allow dust to settle. Engineers typically aim for optimal velocity ranges (e.g., 700-900 FPM for supply, 500-700 FPM for return in residential) to balance efficiency, noise levels, and comfort."
+    },
+    {
+      "q": "What is friction loss in ductwork and how does it affect HVAC system performance?",
+      "a": "Friction loss, also known as pressure drop, is the resistance to airflow caused by the contact of air with the duct's interior surfaces, as well as bends, fittings, and changes in duct area. It's measured in inches of water gauge (in.w.g.). Excessive friction loss requires the HVAC fan to work harder, increasing energy consumption, noise, and potentially leading to inadequate airflow to conditioned spaces."
+    },
+    {
+      "q": "How does duct material and shape affect friction loss and sizing?",
+      "a": "Duct material's surface roughness (e.g., galvanized steel is smoother than fiberglass duct board) impacts friction loss; rougher surfaces cause more resistance. Duct shape also matters: for the same cross-sectional area, round ducts generally have less friction loss and are more aerodynamically efficient than rectangular ducts, especially those with high aspect ratios. This calculator helps determine equivalent sizes for different shapes."
+    },
+    {
+      "q": "What is an ideal aspect ratio for rectangular ducts?",
+      "a": "For rectangular ducts, an aspect ratio (width to height) between 1:1 (square) and 4:1 is generally recommended. A square duct (1:1) is most efficient in terms of friction loss for a given area, similar to a round duct. As the aspect ratio increases (e.g., 8:1), friction loss increases, and more material is required for the same cross-sectional area. Practical considerations like ceiling plenum space often necessitate higher aspect ratios, but designers aim to keep them as low as possible for efficiency."
+    },
+    {
+      "q": "How does this calculator account for both round and rectangular ducts?",
+      "a": "The calculator allows you to specify 'round' or 'rectangular' as the duct shape. If 'round' is selected, it calculates the optimal diameter. If 'rectangular' is chosen, it uses the provided aspect ratio to determine the width and height. For rectangular ducts, it also provides an 'equivalent diameter' which is a common conversion used for friction loss calculations, allowing comparison of hydraulic performance between different shapes."
+    },
+    {
+      "q": "What are the consequences of poorly sized ducts?",
+      "a": "Poorly sized ducts can lead to a range of issues: if undersized, you'll experience inadequate airflow, hot/cold spots, increased fan energy consumption, and excessive noise. If oversized, airflow can become too slow, leading to poor air distribution, stratification, reduced system efficiency, and higher installation costs due to larger material usage and space requirements."
+    },
+    {
+      "q": "How does the allowable friction loss input relate to the total friction loss output?",
+      "a": "The 'Allowable Friction Loss (in.w.g. per 100 ft)' is the desired rate of pressure drop per length of duct. This value is typically chosen based on the HVAC system's fan capabilities and design goals. The calculator then uses this rate, multiplied by the 'Duct Run Length (feet)', to determine the 'Total Friction Loss' across the entire duct section. This helps ensure the entire system's pressure drop stays within acceptable limits."
+    }
+  ],
+  "tags": [
+    "HVAC",
+    "Duct Sizing",
+    "CFM",
+    "Airflow",
+    "Velocity",
+    "Friction Loss",
+    "Duct Design",
+    "Mechanical Engineering",
+    "Building Services",
+    "Air Distribution"
+  ],
+  "related": [
+    "hvac-heat-load-calculator",
+    "duct-static-pressure-calculator",
+    "airflow-conversion-calculator",
+    "hvac-fan-power-calculator"
+  ],
+  "article": [
+    {
+      "heading": "Why use this HVAC duct sizing (CFM, velocity, friction loss) calculator?",
+      "body": "Properly sized HVAC ductwork is the cornerstone of an efficient, quiet, and comfortable heating, ventilation, and air conditioning system. Miscalculation can lead to a cascade of problems, from irritating noise and poor temperature distribution to drastically increased energy bills and premature equipment failure. This HVAC duct sizing calculator helps engineers, contractors, and DIY enthusiasts determine the optimal dimensions for their ductwork by considering three critical parameters: Cubic Feet per Minute (CFM), air velocity, and friction loss.\n\nCFM quantifies the volume of air flowing through the system, directly impacting how effectively a space is conditioned. Air velocity, measured in Feet per Minute (FPM), governs the speed of this airflow; too fast, and you get noisy drafts and increased energy consumption; too slow, and air stratification and poor circulation become issues. Friction loss, expressed in inches of water gauge (in.w.g.) per 100 feet, represents the resistance air encounters as it moves through the ducts. Minimizing friction loss is key to reducing the workload on your HVAC fan and extending its lifespan.\n\nUsing a dedicated calculator eliminates the guesswork and tedious manual calculations involved in duct sizing. It provides precise dimensions for both round and rectangular ducts, ensuring your system delivers conditioned air efficiently and quietly. By accurately determining duct size, you can significantly improve system performance, enhance occupant comfort, and achieve substantial energy savings over the lifespan of your HVAC installation. It's an indispensable tool for designing a balanced and high-performing air distribution system."
+    },
+    {
+      "heading": "How the calculation works",
+      "body": "The core of HVAC duct sizing revolves around balancing airflow requirements with acceptable air velocity and pressure drop. Our calculator simplifies this complex process using established aerodynamic principles.\n\n**1. Determining Required Duct Area:** The first step involves calculating the necessary cross-sectional area of the duct. This is derived directly from your desired airflow (CFM) and the target air velocity (FPM). The fundamental relationship is: `Area (square feet) = CFM / Velocity (FPM)`. For instance, if you need 800 CFM at a target velocity of 700 FPM, the required area would be approximately 1.14 square feet. This area is then converted to square inches for practical dimensioning.\n\n**2. Duct Shape and Dimensions:** Once the required area in square inches is known, the calculator proceeds to determine the actual duct dimensions based on your chosen duct shape:\n   - **Round Ducts:** For a round duct, the diameter is calculated using the formula for the area of a circle: `Diameter = 2 * sqrt(Area / π)`. The result is given in inches.\n   - **Rectangular Ducts:** For rectangular ducts, you provide an aspect ratio (width to height). The calculator then uses this ratio along with the required area to solve for both the width and height of the duct. For example, if the required area is 165 square inches and the aspect ratio is 2:1 (width is twice the height), the calculator will determine the corresponding width and height in inches. The calculator also provides an 'equivalent diameter' for rectangular ducts, which is a common metric used to compare their hydraulic performance to round ducts for friction loss calculations.\n\n**3. Calculating Total Friction Loss:** The 'Allowable Friction Loss (per 100 ft)' input is a critical design parameter, representing the maximum permissible pressure drop per length of duct. This value is typically chosen based on industry standards, fan curves, and noise considerations. The calculator uses this rate, multiplied by the total 'Duct Run Length' you input, to project the 'Total Friction Loss' across that specific section of ductwork. For example, if your allowable friction loss is 0.10 in.w.g. per 100 ft and your duct run is 50 feet, the total friction loss will be 0.05 in.w.g. This helps ensure that the entire duct system's static pressure requirements remain within the operational limits of your HVAC fan."
+    },
+    {
+      "heading": "Common mistakes in HVAC duct sizing (CFM, velocity, friction loss)",
+      "body": "Even experienced professionals can sometimes overlook crucial details in HVAC duct sizing, leading to suboptimal system performance. Being aware of these common pitfalls can help ensure a successful installation.\n\n**1. Oversizing or Undersizing Ducts:** This is perhaps the most prevalent mistake. Undersized ducts lead to higher air velocities, resulting in excessive noise (whistling or rushing air), increased friction loss, and an overworked fan. This translates to higher energy consumption and potentially inadequate airflow to deliver heating or cooling. Conversely, oversized ducts cause lower velocities, which can lead to poor air distribution, reduced system efficiency, and cold/hot spots. They also cost more in materials and occupy valuable space.\n\n**2. Ignoring Friction Loss:** Failing to properly account for friction loss can cripple an HVAC system. Every foot of duct, every elbow, tee, or grille adds resistance. If the cumulative friction loss exceeds the fan's capacity, the system won't deliver the design airflow to the furthest rooms, leading to comfort complaints. Always use appropriate allowable friction loss values based on the application (e.g., lower for residential for quiet operation, higher for industrial).\n\n**3. Using Incorrect Aspect Ratios for Rectangular Ducts:** While rectangular ducts are often necessary due to space constraints, using very high aspect ratios (e.g., 8:1 or more) significantly increases friction loss compared to more square (1:1) or round ducts of the same cross-sectional area. High aspect ratios also require more sheet metal to construct, increasing costs. Aim for aspect ratios between 1:1 and 4:1 whenever possible to maintain efficiency and reduce material usage.\n\n**4. Neglecting Duct Leakage and Insulation:** Even a well-sized duct system can perform poorly if it's leaky or uninsulated. Leaks can cause significant CFM loss, especially in unconditioned spaces, while lack of insulation leads to heat gain or loss, forcing the system to work harder and wasting energy.\n\n**5. Not Accounting for Fittings and Turns:** While this calculator focuses on straight duct sizing and total friction loss based on a rate, a complete duct design must consider the additional pressure drop caused by elbows, transitions, dampers, and diffusers. These components can add substantial 'equivalent length' to a duct run, which must be factored into the overall static pressure calculations for the fan.\n\n**6. Relying Solely on Rules of Thumb:** While rules of thumb can provide a quick estimate, they are no substitute for precise calculations based on actual CFM requirements, desired velocities, and allowable friction loss. Each HVAC system is unique, and a one-size-fits-all approach often leads to compromises in performance and efficiency."
+    }
+  ]
+}
