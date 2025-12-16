@@ -27,17 +27,16 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <head>
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+      >
         <Script
+          id="adsbygoogle-init"
           async
           src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1856020780538432"
           crossOrigin="anonymous"
           strategy="afterInteractive"
         />
-      </head>
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
         <Providers>{children}</Providers>
       </body>
     </html>
