@@ -1,0 +1,168 @@
+{
+  "slug": "air-psychrometrics-mixed-air-and-coil-leaving-conditions",
+  "title": "Air Psychrometrics: Mixed Air & Coil Leaving Conditions",
+  "seo": {
+    "title": "Mixed Air & Coil Leaving Conditions Calculator | HVAC Psychrometrics",
+    "description": "Calculate mixed air properties and coil leaving conditions for HVAC systems, including dry-bulb, wet-bulb, enthalpy, and humidity ratio. Essential for AC design and energy efficiency."
+  },
+  "inputs": [
+    {
+      "id": "dbt_oa",
+      "label": "Outdoor Air Dry-Bulb Temp",
+      "type": "number",
+      "placeholder": "Enter °F",
+      "required": true,
+      "step": 0.1
+    },
+    {
+      "id": "rh_oa",
+      "label": "Outdoor Air Relative Humidity",
+      "type": "number",
+      "placeholder": "Enter %",
+      "required": true,
+      "step": 1
+    },
+    {
+      "id": "oa_flow",
+      "label": "Outdoor Air Flow Rate",
+      "type": "number",
+      "placeholder": "Enter CFM",
+      "required": true,
+      "step": 10
+    },
+    {
+      "id": "dbt_ra",
+      "label": "Return Air Dry-Bulb Temp",
+      "type": "number",
+      "placeholder": "Enter °F",
+      "required": true,
+      "step": 0.1
+    },
+    {
+      "id": "rh_ra",
+      "label": "Return Air Relative Humidity",
+      "type": "number",
+      "placeholder": "Enter %",
+      "required": true,
+      "step": 1
+    },
+    {
+      "id": "ra_flow",
+      "label": "Return Air Flow Rate",
+      "type": "number",
+      "placeholder": "Enter CFM",
+      "required": true,
+      "step": 10
+    },
+    {
+      "id": "dbt_coil",
+      "label": "Cooling Coil Surface Temp (DBT)",
+      "type": "number",
+      "placeholder": "Enter °F",
+      "required": true,
+      "step": 0.1
+    }
+  ],
+  "outputs": [
+    {
+      "id": "dbt_mixed",
+      "label": "Mixed Air Dry-Bulb Temp",
+      "unit": "°F",
+      "precision": 1
+    },
+    {
+      "id": "rh_mixed",
+      "label": "Mixed Air Relative Humidity",
+      "unit": "%",
+      "precision": 1
+    },
+    {
+      "id": "h_mixed",
+      "label": "Mixed Air Enthalpy",
+      "unit": "BTU/lb_da",
+      "precision": 2
+    },
+    {
+      "id": "dbt_coil_leaving",
+      "label": "Coil Leaving Dry-Bulb Temp",
+      "unit": "°F",
+      "precision": 1
+    },
+    {
+      "id": "rh_coil_leaving",
+      "label": "Coil Leaving Relative Humidity",
+      "unit": "%",
+      "precision": 1
+    },
+    {
+      "id": "h_coil_leaving",
+      "label": "Coil Leaving Enthalpy",
+      "unit": "BTU/lb_da",
+      "precision": 2
+    }
+  ],
+  "formula": "const P_atm = 14.696; // Standard atmospheric pressure in psi (101.325 kPa = 14.696 psi)\n\n// Saturation Pressure (Psat) in psi, given T_db in F\nfunction calculatePsat_psi(T_db_F) {\n    // Lee and Kesler equation for vapor pressure, converted to imperial units and simplified.\n    // More practical for T_db_F in range of 32-200 F for HVAC\n    const T_R = T_db_F + 459.67; // Rankine temperature\n    const C1 = -1.0440397E4;\n    const C2 = -1.129465E1;\n    const C3 = -2.7022355E-2;\n    const C4 = 1.289036E-5;\n    const C5 = -2.478726E-9;\n    const C6 = 6.5459673;\n    const ln_Psat = C1 / T_R + C2 + C3 * T_R + C4 * Math.pow(T_R, 2) + C5 * Math.pow(T_R, 3) + C6 * Math.log(T_R);\n    return Math.exp(ln_Psat);\n}\n\n// Humidity Ratio (W) in lb_w/lb_da, given T_db_F and RH (%)\nfunction calculateW(T_db_F, RH_percent) {\n    const RH_decimal = Math.min(100, Math.max(0, RH_percent)) / 100; // Cap RH between 0 and 100\n    const Psat_psi = calculatePsat_psi(T_db_F);\n    let Pv = RH_decimal * Psat_psi; // Partial pressure of water vapor\n    // Ensure Pv is always less than P_atm to avoid division by zero or negative values.\n    // Use a small epsilon for safety if Pv approaches P_atm due to saturation/rounding.\n    if (Pv >= P_atm) {\n        Pv = P_atm * 0.9999; // Cap Pv just below P_atm for stability\n    }\n    return 0.62198 * Pv / (P_atm - Pv);\n}\n\n// Enthalpy (h) in BTU/lb_da, given T_db_F and W (lb_w/lb_da)\nfunction calculateEnthalpy(T_db_F, W) {\n    // Simplified common formula for enthalpy (ASHRAE Fundamentals, approx)\n    // h = c_p_dry_air * T_db_F + W * (h_fg_at_0F + c_p_water_vapor * T_db_F)\n    return 0.24 * T_db_F + W * (1061 + 0.444 * T_db_F);\n}\n\n// Relative Humidity (RH) in %, given T_db_F and W (lb_w/lb_da)\nfunction calculateRH(T_db_F, W) {\n    const Psat_psi = calculatePsat_psi(T_db_F);\n    // Calculate partial pressure of water vapor (Pv) from humidity ratio (W)\n    // W = 0.62198 * Pv / (P_atm - Pv)  =>  W * (P_atm - Pv) = 0.62198 * Pv\n    // W * P_atm - W * Pv = 0.62198 * Pv  =>  W * P_atm = (0.62198 + W) * Pv\n    // Pv = (W * P_atm) / (0.62198 + W)\n    const Pv_from_W = (W * P_atm) / (0.62198 + W);\n    return Math.min(100, Math.max(0, (Pv_from_W / Psat_psi) * 100)); // Cap at 100%, prevent negative\n}\n\n// --- Input Variables ---\nconst DBT_OA = inputs.dbt_oa;\nconst RH_OA = inputs.rh_oa;\nconst OA_Flow = inputs.oa_flow;\nconst DBT_RA = inputs.dbt_ra;\nconst RH_RA = inputs.rh_ra;\nconst RA_Flow = inputs.ra_flow;\nconst DBT_Coil = inputs.dbt_coil;\n\n// Validate inputs to prevent non-physical results (e.g., negative flows, invalid RH)\nif (OA_Flow < 0 || RA_Flow < 0 || RH_OA < 0 || RH_OA > 100 || RH_RA < 0 || RH_RA > 100) {\n    throw new Error(\"Input values for flow rates must be non-negative, and relative humidity must be between 0 and 100%.\");\n}\n\nconst Total_Flow = OA_Flow + RA_Flow;\nif (Total_Flow === 0) {\n    throw new Error(\"Total air flow rate cannot be zero.\");\n}\n\n// --- Calculations for Outdoor Air (OA) ---\nconst W_OA = calculateW(DBT_OA, RH_OA);\nconst H_OA = calculateEnthalpy(DBT_OA, W_OA);\n\n// --- Calculations for Return Air (RA) ---\nconst W_RA = calculateW(DBT_RA, RH_RA);\nconst H_RA = calculateEnthalpy(DBT_RA, W_RA);\n\n// --- Calculations for Mixed Air (M) ---\n// Assuming constant density for volumetric flow rates for simplicity in mixing point calculations.\n// For precise mass flow, density adjustments would be needed, but volumetric averaging is common for air.\n\n// Weighted average for dry-bulb temperature, humidity ratio, and enthalpy\nconst DBT_Mixed = (DBT_OA * OA_Flow + DBT_RA * RA_Flow) / Total_Flow;\nconst W_Mixed = (W_OA * OA_Flow + W_RA * RA_Flow) / Total_Flow;\nconst H_Mixed = (H_OA * OA_Flow + H_RA * RA_Flow) / Total_Flow;\nconst RH_Mixed = calculateRH(DBT_Mixed, W_Mixed);\n\n// --- Calculations for Coil Leaving (CL) Conditions ---\n// For a cooling coil, it's typically assumed that air leaving the coil is saturated (100% RH)\n// at or very near the coil surface temperature, especially if dehumidification occurs.\n// This is often referred to as the Apparatus Dew Point (ADP) or effective surface temperature.\nconst DBT_Coil_Leaving = DBT_Coil;\nconst RH_Coil_Leaving = 100; // Saturated air assumption\nconst W_Coil_Leaving = calculateW(DBT_Coil_Leaving, RH_Coil_Leaving); // W at saturation at coil temp\nconst H_Coil_Leaving = calculateEnthalpy(DBT_Coil_Leaving, W_Coil_Leaving);\n\nreturn {\n    dbt_mixed: DBT_Mixed,\n    rh_mixed: RH_Mixed,\n    h_mixed: H_Mixed,\n    dbt_coil_leaving: DBT_Coil_Leaving,\n    rh_coil_leaving: RH_Coil_Leaving,\n    h_coil_leaving: H_Coil_Leaving\n};\n",
+  "summary": "This calculator determines the psychrometric properties of mixed air (outdoor air + return air) and the conditions of air leaving a cooling coil. Essential for HVAC system design, energy analysis, and ensuring occupant comfort.",
+  "cta": "Calculate Air Conditions",
+  "faq": [
+    {
+      "q": "What is psychrometrics and why is it important for HVAC?",
+      "a": "Psychrometrics is the study of the thermodynamic properties of moist air and is crucial for HVAC design and analysis. It helps engineers understand how temperature, humidity, and air flow affect comfort, indoor air quality, and energy consumption, allowing for efficient system design."
+    },
+    {
+      "q": "Why is it important to calculate mixed air conditions?",
+      "a": "HVAC systems typically mix outdoor air (for ventilation) with return air from the conditioned space. Calculating mixed air conditions (temperature, humidity, enthalpy) is the first step in determining the total load on a conditioning coil and is essential for sizing equipment and predicting system performance."
+    },
+    {
+      "q": "What do 'coil leaving conditions' represent?",
+      "a": "Coil leaving conditions refer to the psychrometric properties of the air immediately after it passes through a conditioning coil (e.g., cooling coil). For cooling coils, this often means the air has been cooled and dehumidified, reaching a saturated or near-saturated state at a specific temperature, known as the apparatus dew point (ADP)."
+    },
+    {
+      "q": "Can this calculator be used for both cooling and heating coils?",
+      "a": "This calculator is primarily designed for cooling coil leaving conditions, where the air is typically cooled and often dehumidified to a saturated state. While the mixed air calculation is general, the coil leaving output assumes the coil cools the air to the input 'Coil Surface Dry-Bulb Temp' and saturates it (100% RH). Heating coil calculations would involve different assumptions regarding moisture content."
+    },
+    {
+      "q": "What is enthalpy in HVAC and why is it useful?",
+      "a": "Enthalpy is a measure of the total energy (sensible + latent) of the air. In HVAC, it helps quantify the total heat content that needs to be added or removed from air. It's particularly useful for calculating the total cooling or heating load across a coil, as the change in enthalpy directly relates to the energy transfer."
+    },
+    {
+      "q": "What are common units used in psychrometrics?",
+      "a": "Common units include Dry-Bulb Temperature (DBT) in degrees Fahrenheit (°F) or Celsius (°C), Relative Humidity (RH) in percentage (%), Humidity Ratio (W) in pounds of water per pound of dry air (lb_w/lb_da) or grams per kilogram (g/kg), and Enthalpy (h) in British Thermal Units per pound of dry air (BTU/lb_da) or kilojoules per kilogram (kJ/kg). Flow rates are typically in Cubic Feet per Minute (CFM) or cubic meters per second (m³/s)."
+    },
+    {
+      "q": "What happens if the cooling coil surface temperature is set above the air's dew point?",
+      "a": "If the coil surface temperature is above the dew point of the incoming air, no dehumidification will occur. The air will only be sensibly cooled, and its relative humidity will increase but it will not reach 100%. This calculator simplifies by assuming the coil surface temperature sets the leaving air's dry-bulb temperature and saturates it, which is typical for dehumidifying coils."
+    }
+  ],
+  "tags": [
+    "HVAC",
+    "Psychrometrics",
+    "Air Conditioning",
+    "Mixed Air",
+    "Cooling Coil",
+    "Air Handling Unit",
+    "Enthalpy",
+    "Humidity",
+    "Thermodynamics"
+  ],
+  "related": [
+    "dew-point-calculator",
+    "sensible-latent-heat-calculator",
+    "ventilation-rate-calculator",
+    "cooling-load-calculator"
+  ],
+  "article": [
+    {
+      "heading": "Why use this Air psychrometrics: mixed air and coil leaving conditions calculator?",
+      "body": "Understanding the psychrometric properties of air at various stages within an HVAC system is not just academic; it's fundamental to designing efficient, comfortable, and healthy indoor environments. This calculator provides critical insights into two key phases: the mixing of outdoor and return air, and the conditioning of air as it leaves a cooling coil. These calculations are the bedrock for accurately determining cooling loads, sizing equipment, and ensuring optimal system performance.\n\nEvery HVAC system that brings in fresh outdoor air for ventilation purposes must first mix it with recirculated return air from the conditioned space. The resulting 'mixed air' has its own unique temperature, humidity, and energy content, which is a weighted average of its two constituent streams. Accurately determining these mixed air conditions is the essential first step in the load calculation process, directly influencing the capacity required from the conditioning coil.\n\nFollowing the mixed air stage, the air typically passes through a cooling coil. This coil not only reduces the air's dry-bulb temperature (sensible cooling) but often also removes moisture (latent cooling/dehumidification). The 'coil leaving conditions' represent the state of the air after this process, which is crucial for predicting the air's ability to handle the room's sensible and latent heat gains. By knowing these conditions, engineers can ensure that the supply air delivered to a space will maintain the desired indoor temperature and relative humidity levels, preventing issues like overcooling, undercooling, or excessive humidity. Without precise calculation, systems can be undersized, leading to discomfort and humidity problems, or oversized, resulting in increased capital costs, higher energy consumption, and poor humidity control due to short cycling."
+    },
+    {
+      "heading": "How the calculation works",
+      "body": "The calculator performs a series of psychrometric calculations based on your input parameters, following established engineering principles. It begins by evaluating the psychrometric properties of both the Outdoor Air (OA) and Return Air (RA) streams. For each stream, given the dry-bulb temperature (DBT) and relative humidity (RH), the calculator determines the corresponding humidity ratio (W) and enthalpy (h).\n\nHere's a breakdown of the core calculations:\n\n1.  **Individual Air Stream Properties:** Using empirical formulas, the saturation pressure of water vapor (Psat) is determined for the given dry-bulb temperature. This Psat, combined with the relative humidity, allows for the calculation of the actual partial pressure of water vapor (Pv). From Pv, the humidity ratio (W – pounds of water vapor per pound of dry air) is derived. Finally, the enthalpy (h – total energy per pound of dry air) is calculated, accounting for both the sensible heat of the dry air and the latent heat of the water vapor.\n\n2.  **Mixed Air Conditions:** Once the properties of OA and RA are known, the calculator determines the mixed air conditions. This is done by performing a mass-weighted average of the DBT, humidity ratio, and enthalpy of the two air streams. While the input uses volumetric flow rates (CFM), for practical HVAC calculations at typical temperatures and pressures, a volumetric average is often a close approximation to a mass average. The formulas are essentially: \n    `DBT_Mixed = (DBT_OA * Flow_OA + DBT_RA * Flow_RA) / Total_Flow` \n    `W_Mixed = (W_OA * Flow_OA + W_RA * Flow_RA) / Total_Flow` \n    `h_Mixed = (h_OA * Flow_OA + h_RA * Flow_RA) / Total_Flow` \n    After calculating the mixed air DBT, W, and h, the mixed air relative humidity is then re-calculated based on its new DBT and W.\n\n3.  **Coil Leaving Conditions:** For cooling coils, a common design assumption is that the air leaves the coil in a saturated state (100% Relative Humidity) at a temperature close to the effective coil surface temperature, often referred to as the Apparatus Dew Point (ADP). This calculator uses the 'Cooling Coil Surface Temp (DBT)' as this effective leaving dry-bulb temperature. Assuming 100% RH at this temperature, the calculator then determines the corresponding humidity ratio and enthalpy of the coil leaving air. This assumption is robust for coils designed for dehumidification, as the air path usually allows for sufficient contact with cold, wet surfaces to reach saturation."
+    },
+    {
+      "heading": "Common mistakes in Air psychrometrics: mixed air and coil leaving conditions",
+      "body": "While this calculator automates complex psychrometric calculations, understanding common pitfalls helps in interpreting results and ensuring accuracy in real-world applications.\n\n1.  **Assuming Volume Flow is Mass Flow Equivalence:** A frequent simplification in mixed air calculations is to use volumetric flow rates (CFM) directly in weighted averages. While this is often acceptable for initial estimates due to the relatively small variations in air density, significant errors can occur when there are large temperature differences between the outdoor and return air streams. Air density varies with temperature and humidity, so a precise calculation would involve converting volumetric flow rates to mass flow rates (e.g., in lb/min or kg/s) before averaging properties.\n\n2.  **Ignoring Latent Load:** Some users might focus solely on dry-bulb temperature and overlook the crucial role of humidity (latent heat). A cooling coil not only cools the air (sensible load) but also removes moisture (latent load). Failing to account for the humidity ratio and enthalpy changes can lead to undersized dehumidification capacity and uncomfortable, sticky indoor environments, even if the temperature target is met.\n\n3.  **Misinterpreting Coil Surface Temperature:** The 'Coil Surface Dry-Bulb Temp' input is used here as the effective temperature to which the air is cooled and saturated. However, in reality, the actual leaving air temperature might be slightly higher than the coil surface temperature, and not perfectly saturated, especially with very high bypass factors or if the coil is not effectively dehumidifying. This input acts as a design-point or apparatus dew point (ADP) for the calculation. It's important not to confuse it with the refrigerant temperature inside the coil, which would be even lower.\n\n4.  **Incorrect Atmospheric Pressure:** Psychrometric properties are dependent on atmospheric pressure. This calculator assumes standard atmospheric pressure at sea level (14.696 psi). For projects at high altitudes, the atmospheric pressure will be lower, significantly impacting calculations, particularly the humidity ratio. For precise work, adjusting the atmospheric pressure based on elevation is necessary.\n\n5.  **Using Inaccurate Psychrometric Formulas or Constants:** The underlying formulas for saturation pressure, humidity ratio, and enthalpy are empirical and rely on specific constants. Using simplified or outdated formulas, or constants calibrated for different units or temperature ranges, can introduce errors. The formulas used in this calculator are standard approximations suitable for typical HVAC applications.\n\n6.  **Neglecting System Losses/Gains:** This calculator focuses on ideal mixed air and coil leaving conditions. In a real system, factors like heat gains/losses through ductwork, fan heat addition, and duct leakage can alter air conditions between stages. These factors should be considered in a comprehensive system analysis."
+    }
+  ]
+}
