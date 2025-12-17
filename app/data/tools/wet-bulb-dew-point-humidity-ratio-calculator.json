@@ -1,0 +1,122 @@
+{
+  "slug": "wet-bulb-dew-point-humidity-ratio-calculator",
+  "title": "Wet Bulb, Dew Point, and Humidity Ratio Calculator",
+  "seo": {
+    "title": "Calculate Wet Bulb, Dew Point, Relative Humidity & Humidity Ratio",
+    "description": "Accurately determine wet bulb temperature, dew point, relative humidity, and humidity ratio for various applications like HVAC, weather analysis, and industrial processes."
+  },
+  "inputs": [
+    {
+      "id": "dryBulbTemp",
+      "label": "Dry Bulb Temperature",
+      "type": "number",
+      "placeholder": "e.g., 25",
+      "required": true,
+      "unit": "°C",
+      "step": 0.1
+    },
+    {
+      "id": "relativeHumidity",
+      "label": "Relative Humidity",
+      "type": "number",
+      "placeholder": "e.g., 60",
+      "required": true,
+      "unit": "%",
+      "step": 0.1,
+      "min": 0,
+      "max": 100
+    },
+    {
+      "id": "atmosphericPressure",
+      "label": "Atmospheric Pressure",
+      "type": "number",
+      "placeholder": "e.g., 1013.25",
+      "required": true,
+      "unit": "hPa",
+      "step": 1,
+      "min": 500,
+      "max": 1150
+    }
+  ],
+  "outputs": [
+    {
+      "id": "wetBulbTemp",
+      "label": "Wet Bulb Temperature",
+      "unit": "°C",
+      "precision": 2
+    },
+    {
+      "id": "dewPointTemp",
+      "label": "Dew Point Temperature",
+      "unit": "°C",
+      "precision": 2
+    },
+    {
+      "id": "humidityRatio",
+      "label": "Humidity Ratio",
+      "unit": "kg/kg dry air",
+      "precision": 5
+    }
+  ],
+  "formula": "const DB_C = inputs.dryBulbTemp;\nconst RH_percent = inputs.relativeHumidity;\nconst P_hPa = inputs.atmosphericPressure;\n\n// Input validation and edge cases\nif (DB_C < -40 || DB_C > 60) {\n    return { error: 'Dry Bulb Temperature must be between -40°C and 60°C.' };\n}\nif (RH_percent < 0 || RH_percent > 100) {\n    return { error: 'Relative Humidity must be between 0% and 100%.' };\n}\nif (P_hPa < 500 || P_hPa > 1150) {\n    return { error: 'Atmospheric Pressure must be between 500 hPa and 1150 hPa.' };\n}\n\nconst RH_decimal = RH_percent / 100;\n\n// 1. Calculate Saturation Vapor Pressure (Psat) at Dry Bulb (DB_C)\n// Magnus-Tetens formula: Es(T) = 6.1078 * exp( (17.27 * T) / (T + 237.3) ) (in hPa)\nconst Psat_DB = 6.1078 * Math.exp((17.27 * DB_C) / (237.3 + DB_C));\n\n// 2. Calculate Actual Vapor Pressure (Pv)\nconst Pv = RH_decimal * Psat_DB;\n\n// 3. Calculate Dew Point (DP_C)\nlet DP_C;\nif (Pv <= 0.001) { // Very low vapor pressure, approximates to very low dew point\n    DP_C = -60; // Cap at a very low practical value to avoid log(0) issues\n} else {\n    const alpha = Math.log(Pv / 6.1078);\n    DP_C = (237.3 * alpha) / (17.27 - alpha);\n}\n\n// 4. Calculate Humidity Ratio (W)\nlet humidityRatio;\nif (P_hPa - Pv <= 0.001) { // Avoid division by zero or negative denominator (implies extreme saturation or error)\n    return { error: 'Actual vapor pressure is too high relative to atmospheric pressure for humidity ratio calculation. Check inputs for extreme conditions.' };\n} else {\n    humidityRatio = 0.62198 * Pv / (P_hPa - Pv); // 0.62198 is the ratio of molar masses of water to dry air\n}\n\n// 5. Calculate Wet Bulb Temperature (WB_C)\n// Using Stull's empirical formula for WB from DB and RH (in percent)\n// This formula is valid for T > 0°C (32°F) and does not explicitly account for atmospheric pressure.\n// For temperatures below 0°C, the physics of psychrometrics change (ice phase vs. liquid water evaporation).\n// A more complex iterative method or a specific sub-zero formula would be required for accuracy below freezing.\nlet WB_C;\nif (DB_C < 0) {\n    return { error: 'Wet Bulb calculation for temperatures below 0°C is outside the scope of this calculator\\'s current approximation due to phase change considerations. Please ensure Dry Bulb Temp is above 0°C.' };\n} else {\n    WB_C = DB_C * Math.atan(0.151977 * Math.pow(RH_percent + 8.313659, 0.5)) +\n           Math.atan(DB_C + RH_percent) -\n           Math.atan(RH_percent - 1.676331) +\n           0.00391838 * Math.pow(RH_percent, 1.5) * Math.atan(0.023101 * RH_percent) - 4.686035;\n}\n\nreturn {\n    wetBulbTemp: WB_C,\n    dewPointTemp: DP_C,\n    humidityRatio: humidityRatio\n};",
+  "summary": "This calculator helps you determine key psychrometric properties of air, including wet bulb temperature, dew point temperature, and humidity ratio. By inputting the dry bulb temperature, relative humidity, and atmospheric pressure, you can gain crucial insights for HVAC design, weather analysis, agricultural planning, and ensuring indoor comfort.",
+  "cta": "Calculate Psychrometric Properties",
+  "faq": [
+    {
+      "q": "What is Wet Bulb Temperature?",
+      "a": "Wet bulb temperature is the temperature a parcel of air would have if cooled to saturation (100% relative humidity) by the evaporation of water into it, with all latent heat supplied by the parcel itself. It's often measured with a thermometer whose bulb is wrapped in a wet cloth and ventilated. It indicates how much moisture the air can absorb, and is crucial for heat stress assessment."
+    },
+    {
+      "q": "What is Dew Point Temperature?",
+      "a": "Dew point temperature is the temperature to which air must be cooled at constant pressure for water vapor to condense into liquid water (dew). When the air temperature cools to the dew point, the relative humidity becomes 100%. A higher dew point indicates more moisture in the air."
+    },
+    {
+      "q": "What is Humidity Ratio?",
+      "a": "Humidity ratio (also known as specific humidity or mixing ratio) is the mass of water vapor per unit mass of dry air in a moist air sample, typically expressed in kilograms of water vapor per kilogram of dry air (kg/kg dry air). Unlike relative humidity, it is not temperature-dependent and directly reflects the absolute amount of moisture in the air."
+    },
+    {
+      "q": "Why are these psychrometric properties important?",
+      "a": "These properties are vital in various fields: in HVAC for designing efficient heating and cooling systems; in meteorology for weather forecasting; in agriculture for crop irrigation and storage; in industrial processes for controlling drying and humidification; and for assessing human thermal comfort and heat stress risk."
+    },
+    {
+      "q": "How does atmospheric pressure affect these calculations?",
+      "a": "Atmospheric pressure significantly influences the humidity ratio and, indirectly, other psychrometric properties, especially at higher altitudes or in industrial processes where pressure varies. A lower atmospheric pressure allows the air to hold more water vapor at the same partial vapor pressure, thus affecting the humidity ratio calculation."
+    },
+    {
+      "q": "What's the difference between Relative Humidity and Humidity Ratio?",
+      "a": "Relative humidity (RH) is a percentage indicating how much moisture the air currently holds compared to the maximum it *could* hold at that specific temperature. Humidity ratio, on the other hand, is an absolute measure of the mass of water vapor per unit mass of dry air. RH is highly temperature-dependent, while humidity ratio is not."
+    },
+    {
+      "q": "Are there limitations to this calculator's accuracy?",
+      "a": "Yes, while providing good approximations for common conditions, this calculator uses empirical formulas. Specifically, the Wet Bulb temperature calculation uses a formula that is most accurate for temperatures above 0°C and does not explicitly factor in atmospheric pressure for WB (though pressure is used for humidity ratio). For extreme conditions (very low/high temperatures, very low/high pressures), specialized psychrometric charts or more complex iterative models might be required."
+    }
+  ],
+  "tags": [
+    "HVAC",
+    "Weather",
+    "Psychrometrics",
+    "Humidity",
+    "Temperature",
+    "Engineering",
+    "Environmental Science"
+  ],
+  "related": [
+    "relative-humidity-calculator",
+    "air-density-calculator",
+    "heat-index-calculator"
+  ],
+  "article": [
+    {
+      "heading": "Why use this Wet bulb / dew point / humidity ratio calculator?",
+      "body": "Understanding the psychrometric properties of air is fundamental in numerous fields, from maintaining comfortable indoor environments to predicting weather patterns and optimizing industrial processes. This Wet Bulb, Dew Point, and Humidity Ratio Calculator provides a quick and accurate way to determine these crucial metrics, simplifying complex calculations that would otherwise require psychrometric charts or advanced software.\n\nFor HVAC professionals, precise knowledge of wet bulb temperature is essential for designing efficient cooling coils and evaporative coolers. It directly influences the sensible and latent heat loads, impacting system sizing and energy consumption. An accurate humidity ratio helps in understanding the absolute moisture content, which is critical for dehumidification strategies and ensuring optimal indoor air quality.\n\nIn meteorology, dew point temperature is a more direct indicator of actual moisture content in the air than relative humidity, as it's not affected by temperature fluctuations throughout the day. A high dew point suggests muggy conditions and potential for fog or precipitation, while a low dew point indicates dry air. Combining this with wet bulb temperature helps forecasters assess atmospheric stability and potential for storm development.\n\nBeyond these, agricultural experts use these values to manage greenhouses and crop drying, ensuring ideal conditions to prevent spoilage and optimize growth. Industrial applications, such as drying processes in manufacturing, require strict control over air humidity to maintain product quality. By providing these values instantly, this calculator empowers users to make informed decisions, enhance efficiency, and improve environmental control across various applications, contributing to better comfort, safety, and operational performance."
+    },
+    {
+      "heading": "How the calculation works",
+      "body": "This calculator determines wet bulb temperature, dew point temperature, and humidity ratio using established psychrometric principles and empirical formulas, based on your inputs: dry bulb temperature, relative humidity, and atmospheric pressure. Here’s a breakdown of the calculation process:\n\nFirst, the **Dry Bulb Temperature** (°C) and **Relative Humidity** (%) are used to calculate the **Saturation Vapor Pressure (Psat)**. This is the maximum amount of water vapor that air can hold at a given dry bulb temperature before condensation occurs. We employ a variant of the Magnus-Tetens formula, a widely accepted equation for this purpose:\n`Psat = 6.1078 * exp((17.27 * T) / (T + 237.3))`, where `T` is the dry bulb temperature in Celsius.\n\nNext, the **Actual Vapor Pressure (Pv)** is determined by multiplying the saturation vapor pressure by the relative humidity (converted to a decimal). This `Pv` represents the actual partial pressure exerted by water vapor in the air.\n\nThe **Dew Point Temperature** is then calculated by inverting the Magnus-Tetens formula, using the actual vapor pressure. This gives us the temperature at which the air would become saturated, leading to condensation. Special handling is applied for very low actual vapor pressures to prevent mathematical errors and provide a realistic minimum dew point.\n\nTo calculate the **Humidity Ratio**, which is the mass of water vapor per unit mass of dry air, the following formula is used: `W = 0.62198 * Pv / (P_hPa - Pv)`, where `P_hPa` is the atmospheric pressure. The constant `0.62198` represents the ratio of the molar mass of water to dry air. This calculation explicitly factors in atmospheric pressure, providing a more accurate absolute measure of moisture content, especially important at varying altitudes.\n\nFinally, the **Wet Bulb Temperature** is derived. While a precise calculation often involves iterative methods based on energy balance equations, this calculator utilizes an advanced empirical approximation developed by J. E. Stull (1987). This formula, which takes dry bulb temperature and relative humidity as its primary inputs, provides a reliable estimate for temperatures above 0°C (32°F). It's important to note that this specific formula is designed for conditions where liquid water evaporation occurs and its accuracy decreases significantly for sub-zero temperatures, where ice sublimation becomes the dominant process. The calculator therefore includes a safeguard to advise users if temperatures fall below this threshold."
+    },
+    {
+      "heading": "Common mistakes in Wet bulb / dew point / humidity ratio calculator",
+      "body": "While this calculator is designed for ease of use, understanding potential pitfalls can help you avoid common mistakes and ensure accurate results:\n\n1.  **Incorrect Units:** One of the most frequent errors is inputting values in the wrong units. Ensure your dry bulb temperature is in Celsius (°C), relative humidity in percentage (%), and atmospheric pressure in hectopascals (hPa). Mixing units will lead to significantly erroneous outputs.\n\n2.  **Misinterpreting Relative Humidity:** Remember that relative humidity is highly dependent on temperature. A 50% RH at 10°C means much less absolute moisture than 50% RH at 30°C. Always consider relative humidity in conjunction with dry bulb temperature; the humidity ratio and dew point give a more absolute picture of moisture content.\n\n3.  **Neglecting Atmospheric Pressure:** For accurate humidity ratio calculations, atmospheric pressure is crucial. Many simpler calculators might assume standard sea-level pressure, which can lead to inaccuracies, especially at higher altitudes or in controlled industrial environments where pressure deviates significantly. This calculator explicitly includes atmospheric pressure as an input to mitigate this issue.\n\n4.  **Extreme Temperature Conditions for Wet Bulb:** The empirical formula used for wet bulb temperature in this calculator is optimized for temperatures above 0°C (32°F). Attempting to calculate wet bulb for sub-freezing dry bulb temperatures using this method will result in an error, as the physics of ice sublimation are different from liquid water evaporation. For such conditions, specialized psychrometric models for ice would be necessary.\n\n5.  **Entering Unrealistic Values:** Inputting values outside typical environmental ranges (e.g., extremely low or high humidity/pressure) can lead to physically impossible or undefined results. The calculator includes validation checks for common input ranges to alert you to such entries.\n\nBy being mindful of these points, you can maximize the utility and accuracy of your psychrometric calculations, leading to better decision-making in your specific application."
+    }
+  ]
+}
