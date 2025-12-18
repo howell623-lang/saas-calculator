@@ -34,14 +34,21 @@ export function AdSlot({ slotName = "global", note }: Props) {
       try {
         if (typeof window !== "undefined") {
           const adsbygoogle = (window as any).adsbygoogle || [];
+          // Check if this specific element already has an ad (AdSense adds attributes)
+          if (adRef.current && adRef.current.getAttribute("data-adsbygoogle-status") === "done") {
+            return;
+          }
           adsbygoogle.push({});
           setAdPushed(true);
           setAdError(false);
         }
-      } catch (err) {
+      } catch (err: any) {
+        // Tag already pushed or other common AdSense "errors" that aren't fatal
+        if (err?.message?.includes("All 'ins' elements")) {
+          setAdPushed(true);
+          return;
+        }
         console.error("[AdSlot] Error pushing ad:", err);
-        // AdSense might throw an error if called too early or if already filled
-        // We don't necessarily want to show an error to the user as it might be a temporary issue
       }
     };
 
