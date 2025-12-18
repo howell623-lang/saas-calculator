@@ -24,32 +24,36 @@ export function AdSlot({ slotName = "global", note }: Props) {
   const [adError, setAdError] = useState(false);
 
   useEffect(() => {
-    // Only push once when ads are enabled and component is mounted
-    if (!adsEnabled || adPushed || !adRef.current) return;
+    // Only push when ads are enabled and component is mounted
+    if (!adsEnabled || !adRef.current) return;
 
-    // Wait for adsbygoogle script to be fully loaded
+    // We use a key to force re-mounting if needed, but here we track push state per mount
+    if (adPushed) return;
+
     const pushAd = () => {
       try {
-        // Check if the script is loaded
-        if (typeof window !== "undefined" && window.adsbygoogle) {
-          // Push ad request
-          (window.adsbygoogle = window.adsbygoogle || []).push({});
+        if (typeof window !== "undefined") {
+          const adsbygoogle = (window as any).adsbygoogle || [];
+          adsbygoogle.push({});
           setAdPushed(true);
           setAdError(false);
-        } else {
-          // Script not loaded yet, retry after a short delay
-          setTimeout(pushAd, 100);
         }
       } catch (err) {
         console.error("[AdSlot] Error pushing ad:", err);
-        setAdError(true);
+        // AdSense might throw an error if called too early or if already filled
+        // We don't necessarily want to show an error to the user as it might be a temporary issue
       }
     };
 
-    // Small delay to ensure DOM is ready
-    const timeout = setTimeout(pushAd, 50);
+    // Use requestAnimationFrame to ensure the DOM has updated before pushing
+    const rafId = requestAnimationFrame(() => {
+      const timeout = setTimeout(pushAd, 200);
+      return () => clearTimeout(timeout);
+    });
 
-    return () => clearTimeout(timeout);
+    return () => {
+      cancelAnimationFrame(rafId);
+    };
   }, [adsEnabled, adPushed]);
 
   if (!adsEnabled) return null;
