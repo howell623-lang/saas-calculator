@@ -68,14 +68,14 @@ export function AdSlot({ slotName = "global", note }: Props) {
   return (
     <div 
       className="rounded-2xl border border-dashed border-gray-300 bg-gray-50 p-3 text-sm text-gray-700"
-      style={{ minHeight: "150px" }}
+      style={{ minHeight: "280px", overflow: "hidden" }}
     >
       <ins
         ref={adRef}
         className="adsbygoogle"
         style={{ 
           display: "block", 
-          minHeight: "120px",
+          minHeight: "250px",
           width: "100%"
         }}
         data-ad-client={ADS_CLIENT}
