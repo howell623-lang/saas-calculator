@@ -33,6 +33,16 @@ export default function RootLayout({
           src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1856020780538432"
           crossOrigin="anonymous"
         />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (window.adsbygoogle = window.adsbygoogle || []).push({
+                google_ad_client: "ca-pub-1856020780538432",
+                enable_page_level_ads: true
+              });
+            `,
+          }}
+        />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}

@@ -27,40 +27,36 @@ export function AdSlot({ slotName = "global", note }: Props) {
     // Only push when ads are enabled and component is mounted
     if (!adsEnabled || !adRef.current) return;
 
-    // We use a key to force re-mounting if needed, but here we track push state per mount
-    if (adPushed) return;
-
     const pushAd = () => {
+      if (adPushed) return;
+      
       try {
         if (typeof window !== "undefined") {
           const adsbygoogle = (window as any).adsbygoogle || [];
-          // Check if this specific element already has an ad (AdSense adds attributes)
-          if (adRef.current && adRef.current.getAttribute("data-adsbygoogle-status") === "done") {
+          
+          // Double check if already initialized by AdSense attributes
+          if (adRef.current?.getAttribute("data-adsbygoogle-status") === "done") {
+            setAdPushed(true);
             return;
           }
+
           adsbygoogle.push({});
           setAdPushed(true);
-          setAdError(false);
         }
       } catch (err: any) {
-        // Tag already pushed or other common AdSense "errors" that aren't fatal
         if (err?.message?.includes("All 'ins' elements")) {
           setAdPushed(true);
           return;
         }
-        console.error("[AdSlot] Error pushing ad:", err);
+        // In dev or on rapid re-mount, this might fail, we mark as pushed to avoid loop
+        setAdPushed(true);
+        console.warn("[AdSlot] AdSense push notice:", err.message);
       }
     };
 
-    // Use requestAnimationFrame to ensure the DOM has updated before pushing
-    const rafId = requestAnimationFrame(() => {
-      const timeout = setTimeout(pushAd, 200);
-      return () => clearTimeout(timeout);
-    });
-
-    return () => {
-      cancelAnimationFrame(rafId);
-    };
+    // Use a slightly longer timeout and direct dependency check
+    const timeout = setTimeout(pushAd, 500);
+    return () => clearTimeout(timeout);
   }, [adsEnabled, adPushed]);
 
   if (!adsEnabled) return null;
