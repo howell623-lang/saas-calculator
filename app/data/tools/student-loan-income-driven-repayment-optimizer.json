@@ -1,0 +1,153 @@
+{
+  "slug": "student-loan-income-driven-repayment-optimizer",
+  "title": "Student Loan Income-Driven Repayment Optimizer",
+  "seo": {
+    "title": "Student Loan IDR Optimizer | Plan Forgiveness & Payments",
+    "description": "Optimize your student loan income-driven repayment plan to minimize total payments or maximize forgiveness. Project payments, interest, and forgiveness potential based on income, family size, and repayment options."
+  },
+  "inputs": [
+    {
+      "id": "loan_balance_total",
+      "label": "Total Outstanding Loan Balance",
+      "type": "number",
+      "placeholder": "e.g., 50000",
+      "required": true,
+      "step": 100
+    },
+    {
+      "id": "average_interest_rate",
+      "label": "Average Annual Interest Rate (e.g., 0.05 for 5%)",
+      "type": "number",
+      "placeholder": "e.g., 0.05",
+      "required": true,
+      "step": 0.001
+    },
+    {
+      "id": "current_agi",
+      "label": "Your Current Adjusted Gross Income (AGI)",
+      "type": "number",
+      "placeholder": "e.g., 60000",
+      "required": true,
+      "step": 1000
+    },
+    {
+      "id": "family_size",
+      "label": "Your Current Family Size",
+      "type": "number",
+      "placeholder": "e.g., 1 or 2",
+      "required": true,
+      "step": 1
+    },
+    {
+      "id": "agi_annual_growth_rate",
+      "label": "Expected Annual AGI Growth Rate (e.g., 0.03 for 3%)",
+      "type": "number",
+      "placeholder": "e.g., 0.03",
+      "required": true,
+      "step": 0.001
+    },
+    {
+      "id": "idr_plan_term_years",
+      "label": "IDR Repayment Term for Forgiveness (Years)",
+      "type": "number",
+      "placeholder": "e.g., 20 or 25",
+      "required": true,
+      "step": 1
+    }
+  ],
+  "outputs": [
+    {
+      "id": "initial_idr_payment",
+      "label": "Initial Estimated Monthly IDR Payment",
+      "unit": "$",
+      "precision": 2
+    },
+    {
+      "id": "total_paid_idr",
+      "label": "Total Payments Over IDR Term",
+      "unit": "$",
+      "precision": 2
+    },
+    {
+      "id": "forgiven_amount",
+      "label": "Estimated Forgiven Amount",
+      "unit": "$",
+      "precision": 2
+    },
+    {
+      "id": "estimated_tax_on_forgiveness",
+      "label": "Estimated Tax on Forgiven Amount",
+      "unit": "$",
+      "precision": 2
+    },
+    {
+      "id": "net_cost_with_forgiveness",
+      "label": "Net Cost (Total Paid + Tax on Forgiveness)",
+      "unit": "$",
+      "precision": 2
+    }
+  ],
+  "formula": "function calculateFPL(familySize) {\n  const FPL_BASE_1_PERSON = 15060; // 2024 Federal Poverty Level for 1 person (contiguous US)\n  const FPL_INCREMENT_PER_PERSON = 5380; // Increment for each additional person\n  return FPL_BASE_1_PERSON + (Math.max(0, familySize - 1) * FPL_INCREMENT_PER_PERSON);\n}\n\nconst IDR_DISCRETIONARY_PERCENTAGE = 0.10; // Models PAYE/REPAYE (pre-July 2024 SAVE undergraduate loans)\nconst FORGIVENESS_TAX_RATE = 0.22; // Assumed marginal tax rate for forgiveness\n\nlet currentLoanBalance = loan_balance_total;\nlet totalPaid = 0;\nlet currentAGI = current_agi;\nlet initialMonthlyPayment = 0;\n\nfor (let year = 0; year < idr_plan_term_years; year++) {\n  const currentFPL = calculateFPL(family_size);\n  const discretionaryIncome = Math.max(0, currentAGI - (1.5 * currentFPL));\n  let annualIDRPayment = discretionaryIncome * IDR_DISCRETIONARY_PERCENTAGE;\n  let monthlyIDRPaymentForYear = annualIDRPayment / 12;\n\n  // Store the initial payment for the first year\n  if (year === 0) {\n    initialMonthlyPayment = monthlyIDRPaymentForYear;\n  }\n\n  for (let month = 0; month < 12; month++) {\n    const monthlyInterest = currentLoanBalance * (average_interest_rate / 12);\n    \n    // Cap payment to ensure it doesn't exceed the balance plus accrued interest\n    // and ensure it doesn't go below 0.\n    let paymentThisMonth = Math.min(monthlyIDRPaymentForYear, currentLoanBalance + monthlyInterest + 0.01);\n    paymentThisMonth = Math.max(0, paymentThisMonth); // Ensure payment is not negative\n\n    totalPaid += paymentThisMonth;\n    currentLoanBalance += monthlyInterest - paymentThisMonth;\n    currentLoanBalance = Math.max(0, currentLoanBalance); // Loan balance cannot be negative\n\n    if (currentLoanBalance <= 0) {\n      // Loan paid off early\n      return {\n        initial_idr_payment: initialMonthlyPayment,\n        total_paid_idr: totalPaid,\n        forgiven_amount: 0,\n        estimated_tax_on_forgiveness: 0,\n        net_cost_with_forgiveness: totalPaid\n      };\n    }\n  }\n  currentAGI *= (1 + agi_annual_growth_rate);\n}\n\nconst forgivenAmount = currentLoanBalance;\nconst estimatedTaxOnForgiveness = forgivenAmount * FORGIVENESS_TAX_RATE;\nconst netCostWithForgiveness = totalPaid + estimatedTaxOnForgiveness;\n\nreturn {\n  initial_idr_payment: initialMonthlyPayment,\n  total_paid_idr: totalPaid,\n  forgiven_amount: forgivenAmount,\n  estimated_tax_on_forgiveness: estimatedTaxOnForgiveness,\n  net_cost_with_forgiveness: netCostWithForgiveness\n};",
+  "summary": "This tool helps you optimize your student loan income-driven repayment (IDR) plan. Project your monthly payments, total amount paid, and potential forgiveness based on your income, family size, interest rates, and expected income growth over the IDR term.",
+  "cta": "Optimize My Student Loan Payments!",
+  "faq": [
+    {
+      "q": "What is Income-Driven Repayment (IDR)?",
+      "a": "Income-Driven Repayment (IDR) plans are federal student loan repayment options designed to make your monthly payments affordable based on your income and family size. Payments are typically a percentage of your discretionary income, and any remaining balance is forgiven after 20 or 25 years of qualifying payments."
+    },
+    {
+      "q": "How is my IDR payment calculated?",
+      "a": "Your IDR payment is typically calculated annually based on your Adjusted Gross Income (AGI) and family size. A portion of your income, usually 150% of the federal poverty line for your family size, is protected and not included in your 'discretionary income'. Your payment is then a percentage (e.g., 10% or 15%) of your remaining discretionary income."
+    },
+    {
+      "q": "Will my IDR payment change over time?",
+      "a": "Yes, your IDR payment is recalculated annually. As your income (AGI) grows, your discretionary income will likely increase, leading to higher monthly payments. This optimizer projects your payments based on your expected AGI growth rate."
+    },
+    {
+      "q": "What happens at the end of the IDR repayment term?",
+      "a": "After making qualifying payments for 20 or 25 years (depending on your specific IDR plan and loan type), any remaining loan balance is forgiven. However, it's crucial to note that, in most cases, the forgiven amount is considered taxable income by the IRS and you will owe taxes on it."
+    },
+    {
+      "q": "Is the forgiven loan amount taxable?",
+      "a": "Generally, yes. Under current IRS rules, the amount of student loan debt forgiven under an Income-Driven Repayment plan is considered taxable income in the year it's forgiven, unless you qualify for specific exceptions like Public Service Loan Forgiveness (PSLF). This tool includes an estimate for these potential taxes."
+    },
+    {
+      "q": "Which IDR plan does this optimizer use for calculations?",
+      "a": "This optimizer models a common IDR scenario, specifically plans like PAYE or the original REPAYE (now SAVE, with similar 10% discretionary income calculations for graduate loans). While specific plan details can vary (e.g., new SAVE plan for undergraduate loans can be 5% discretionary), this provides a strong estimation for many borrowers. For tailored advice, consult your loan servicer or a financial advisor."
+    },
+    {
+      "q": "Can I use this tool for Public Service Loan Forgiveness (PSLF)?",
+      "a": "While this tool helps estimate IDR payments which are a prerequisite for PSLF, it does not specifically calculate PSLF eligibility or forgiveness. PSLF has additional requirements, such as working for a qualifying employer and making 120 qualifying payments. The forgiven amount under PSLF is generally not taxable, unlike regular IDR forgiveness."
+    }
+  ],
+  "tags": [
+    "student loans",
+    "education finance",
+    "financial planning",
+    "loan repayment",
+    "IDR",
+    "forgiveness",
+    "debt management",
+    "personal finance"
+  ],
+  "related": [
+    "student-loan-interest-calculator",
+    "debt-payoff-calculator",
+    "net-worth-calculator",
+    "loan-amortization-calculator"
+  ],
+  "article": [
+    {
+      "heading": "Why use this Student Loan Income-Driven Repayment Optimizer?",
+      "body": "Navigating the complexities of student loan repayment can feel like deciphering a secret code. For many, Income-Driven Repayment (IDR) plans offer a lifeline, promising affordable monthly payments tied to one's financial reality. However, understanding how these plans truly impact your long-term finances – including total payments, accumulated interest, and the potential for loan forgiveness – requires more than just a glance at your current monthly bill. This Student Loan Income-Driven Repayment Optimizer provides a crucial tool for clarity and proactive financial planning.\n\nInspired by the evergreen demand for robust financial planning in the realm of education, this optimizer empowers you to project your student loan journey under various income-driven repayment options. It doesn't just show you your current payment; it forecasts how your payments will evolve as your income grows, how interest will accrue over decades, and what amount you might realistically expect to be forgiven at the end of your repayment term. Crucially, it also accounts for the often-overlooked tax implications of that forgiveness, giving you a more complete picture of your 'net cost'.\n\nFor students and graduates burdened by educational debt, making informed decisions about repayment strategies is paramount. Whether your goal is to minimize your total out-of-pocket expenses or to strategically maximize potential forgiveness, this tool offers the insights you need. It brings transparency to a system that can often feel opaque, allowing you to model different scenarios and understand the long-term impact of your income, family size, and expected financial trajectory on your student loan debt. Take control of your financial future and make smarter choices about one of your biggest financial commitments."
+    },
+    {
+      "heading": "How the calculation works",
+      "body": "The Student Loan Income-Driven Repayment Optimizer performs a sophisticated, year-by-year, and month-by-month projection of your loan repayment under an IDR plan. It takes into account several dynamic factors to provide a comprehensive forecast.\n\nFirst, we establish your initial monthly IDR payment. This is determined by your current Adjusted Gross Income (AGI) and family size. A critical component here is the Federal Poverty Level (FPL). IDR plans protect a portion of your income – typically 150% of the FPL for your family size – from being considered 'discretionary income'. Your IDR payment is then calculated as a percentage (e.g., 10% for plans like PAYE or the original REPAYE) of your remaining discretionary income. This initial calculation sets the stage for your first year of repayment.\n\nAs the years progress, the optimizer simulates the annual recalculation of your IDR payment. Your AGI is projected to grow each year based on the 'Expected Annual AGI Growth Rate' you provide. This means your discretionary income will likely increase, leading to higher monthly payments over time. Simultaneously, your loan balance is continuously monitored for interest accrual. Each month, interest is calculated on the outstanding principal. If your IDR payment for that month doesn't cover the full interest, the remaining unpaid interest is added to your principal balance – a phenomenon known as negative amortization. Conversely, if your payment exceeds the accrued interest, it begins to reduce your principal.\n\nThe simulation continues for the 'IDR Repayment Term for Forgiveness' you specify, typically 20 or 25 years. At the end of this term, the remaining loan balance (if any) is considered for forgiveness. The tool then calculates this 'Estimated Forgiven Amount'.\n\nFinally, and crucially, the optimizer estimates the tax burden associated with that forgiveness. Under current IRS regulations, most IDR loan forgiveness is considered taxable income. By applying an assumed marginal tax rate (e.g., 22% in this tool), we provide an 'Estimated Tax on Forgiven Amount'. This allows us to determine the 'Net Cost (Total Paid + Tax on Forgiveness)', offering a more accurate picture of your overall financial obligation under an IDR plan, beyond just the monthly payments."
+    },
+    {
+      "heading": "Common mistakes in Student Loan Income-Driven Repayment Optimization",
+      "body": "Optimizing student loan repayment under IDR plans is a powerful strategy, but several common pitfalls can lead to miscalculations or missed opportunities. Being aware of these can help you make more effective financial decisions.\n\nOne of the most frequent mistakes is **underestimating or ignoring AGI growth**. Your income is unlikely to remain stagnant for 20-25 years. Failing to account for annual AGI increases means your projected payments will be too low, and your anticipated forgiveness amount might be inaccurately high. Our optimizer helps mitigate this by incorporating an AGI growth rate.\n\nAnother significant oversight is **forgetting about the tax bomb on forgiveness**. While loan forgiveness sounds like a full escape from debt, the IRS generally views the forgiven amount as taxable income. Many borrowers are blindsided by a substantial tax bill in the year their loans are forgiven. This tool directly addresses this by estimating potential tax liability, allowing you to plan for it.\n\n**Not understanding the Federal Poverty Level (FPL) calculation** can also lead to misinterpretations. The FPL, scaled by 150% for IDR calculations, acts as a protective shield for a portion of your income. Its annual adjustment and dependence on family size are critical. Incorrectly estimating your discretionary income will directly impact your monthly payments.\n\nWhile this specific tool focuses on a common IDR formula, a broader mistake is **not comparing different IDR plans** or comparing IDR to the standard 10-year repayment plan. Each IDR plan (PAYE, REPAYE/SAVE, IBR, ICR) has slightly different terms regarding payment percentages, interest capitalization rules, and forgiveness terms. While our tool provides a robust estimate for a popular IDR scenario, it's essential to understand the nuances of each available option.\n\nFinally, **failing to recertify your income and family size annually** with your loan servicer is a crucial administrative mistake. If you miss the deadline, your payments can revert to the higher standard repayment amount, or interest can capitalize, potentially increasing your overall debt burden. Regular review and adjustment of your plan, aligned with your changing financial circumstances, are key to truly optimizing your student loan repayment."
+    }
+  ]
+}
