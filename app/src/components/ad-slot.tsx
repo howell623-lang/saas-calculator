@@ -32,18 +32,22 @@ export function AdSlot({ slotName = "global", note }: Props) {
 
       try {
         if (typeof window !== "undefined") {
-          // Check if the script is loaded. If not, we might need to wait or it's blocked.
-          if (!(window as any).adsbygoogle) {
+          const adsbygoogle = (window as any).adsbygoogle;
+          
+          if (!adsbygoogle) {
             console.warn("[AdSlot] AdSense script (adsbygoogle) not found on window. Retrying...");
             return;
           }
-
-          const adsbygoogle = (window as any).adsbygoogle;
 
           // Double check if already initialized by AdSense attributes
           if (adRef.current?.getAttribute("data-adsbygoogle-status") === "done") {
             setAdPushed(true);
             return;
+          }
+
+          // Check if the element is visible
+          if (adRef.current && adRef.current.offsetHeight === 0) {
+             console.warn("[AdSlot] Container not visible yet");
           }
 
           adsbygoogle.push({});

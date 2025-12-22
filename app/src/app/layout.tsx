@@ -34,6 +34,7 @@ export default function RootLayout({
           crossOrigin="anonymous"
           strategy="afterInteractive"
         />
+        <meta name="google-adsense-account" content="ca-pub-1856020780538432" />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
