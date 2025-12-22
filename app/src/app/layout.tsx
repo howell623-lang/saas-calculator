@@ -28,13 +28,12 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <Script
+        {/* eslint-disable-next-line @next/next/no-page-custom-font */}
+        <script
           async
           src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1856020780538432"
           crossOrigin="anonymous"
-          strategy="afterInteractive"
         />
-        <meta name="google-adsense-account" content="ca-pub-1856020780538432" />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}

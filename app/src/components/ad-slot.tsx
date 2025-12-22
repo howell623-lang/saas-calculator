@@ -35,32 +35,20 @@ export function AdSlot({ slotName = "global", note }: Props) {
           const adsbygoogle = (window as any).adsbygoogle;
           
           if (!adsbygoogle) {
-            console.warn("[AdSlot] AdSense script (adsbygoogle) not found on window. Retrying...");
             return;
           }
 
-          // Double check if already initialized by AdSense attributes
+          // Check if the element is already processed by AdSense
           if (adRef.current?.getAttribute("data-adsbygoogle-status") === "done") {
             setAdPushed(true);
             return;
-          }
-
-          // Check if the element is visible
-          if (adRef.current && adRef.current.offsetHeight === 0) {
-             console.warn("[AdSlot] Container not visible yet");
           }
 
           adsbygoogle.push({});
           setAdPushed(true);
         }
       } catch (err: any) {
-        if (err?.message?.includes("All 'ins' elements")) {
-          setAdPushed(true);
-          return;
-        }
-        // In dev or on rapid re-mount, this might fail, we mark as pushed to avoid loop
         setAdPushed(true);
-        console.warn("[AdSlot] AdSense push notice:", err.message);
       }
     };
 
