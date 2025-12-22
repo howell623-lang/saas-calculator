@@ -29,11 +29,17 @@ export function AdSlot({ slotName = "global", note }: Props) {
 
     const pushAd = () => {
       if (adPushed) return;
-      
+
       try {
         if (typeof window !== "undefined") {
-          const adsbygoogle = (window as any).adsbygoogle || [];
-          
+          // Check if the script is loaded. If not, we might need to wait or it's blocked.
+          if (!(window as any).adsbygoogle) {
+            console.warn("[AdSlot] AdSense script (adsbygoogle) not found on window. Retrying...");
+            return;
+          }
+
+          const adsbygoogle = (window as any).adsbygoogle;
+
           // Double check if already initialized by AdSense attributes
           if (adRef.current?.getAttribute("data-adsbygoogle-status") === "done") {
             setAdPushed(true);
