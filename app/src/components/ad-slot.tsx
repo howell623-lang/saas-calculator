@@ -35,19 +35,23 @@ export function AdSlot({ slotName = "global", note }: Props) {
           const adsbygoogle = (window as any).adsbygoogle;
           
           if (!adsbygoogle) {
+            console.log(`[AdSlot:${slotName}] Waiting for adsbygoogle script...`);
             return;
           }
 
           // Check if the element is already processed by AdSense
           if (adRef.current?.getAttribute("data-adsbygoogle-status") === "done") {
+            console.log(`[AdSlot:${slotName}] Ad already marked as done by AdSense.`);
             setAdPushed(true);
             return;
           }
 
+          console.log(`[AdSlot:${slotName}] Pushing ad request...`);
           adsbygoogle.push({});
           setAdPushed(true);
         }
       } catch (err: any) {
+        console.error(`[AdSlot:${slotName}] Error pushing ad:`, err);
         setAdPushed(true);
       }
     };
