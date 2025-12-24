@@ -40,6 +40,11 @@ export default function RootLayout({
               (adsbygoogle = window.adsbygoogle || []).onload = function () {
                 console.log("AdSense script loaded");
               };
+              window.onerror = function(message, source, lineno, colno, error) {
+                if (message.includes('adsbygoogle') || (source && source.includes('googlesyndication'))) {
+                  console.error('AdSense Error:', message, source, lineno, colno, error);
+                }
+              };
             `,
           }}
         />

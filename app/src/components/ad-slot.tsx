@@ -20,38 +20,47 @@ declare global {
 export function AdSlot({ slotName = "global", note }: Props) {
   const { adsEnabled } = useAds();
   const [key, setKey] = useState(0);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // Force re-render on mount and occasional updates to ensure script can find the element
   useEffect(() => {
-    setKey(prev => prev + 1);
+    setKey((prev) => prev + 1);
   }, [adsEnabled]);
+
+  useEffect(() => {
+    if (adsEnabled && key > 0) {
+      try {
+        if (typeof window !== "undefined" && window.adsbygoogle) {
+          // Check if it's already filled
+          const ins = containerRef.current?.querySelector("ins");
+          if (ins && ins.innerHTML.trim() === "") {
+            (window.adsbygoogle = window.adsbygoogle || []).push({});
+          }
+        }
+      } catch (e) {
+        console.error("AdSense push error:", e);
+      }
+    }
+  }, [adsEnabled, key]);
 
   if (!adsEnabled) return null;
 
   return (
-    <div 
+    <div
       key={key}
-      className="rounded-2xl border border-dashed border-gray-300 bg-gray-50 p-3 text-sm text-gray-700 mx-auto w-full"
+      ref={containerRef}
+      className="mx-auto w-full rounded-2xl border border-dashed border-gray-300 bg-gray-50 p-3 text-sm text-gray-700"
       style={{ minHeight: "280px", maxWidth: "100%", overflow: "hidden" }}
     >
-      <div
-        dangerouslySetInnerHTML={{
-          __html: `
-            <ins class="adsbygoogle"
-                 style="display:block; min-width:250px; min-height:250px;"
-                 data-ad-client="${ADS_CLIENT}"
-                 data-ad-slot="${ADS_SLOT}"
-                 data-ad-format="auto"
-                 data-full-width-responsive="true"></ins>
-            <script>
-                 (adsbygoogle = window.adsbygoogle || []).push({});
-            </script>
-          `
-        }}
+      <ins
+        className="adsbygoogle"
+        style={{ display: "block", minWidth: "250px", minHeight: "250px" }}
+        data-ad-client={ADS_CLIENT}
+        data-ad-slot={ADS_SLOT}
+        data-ad-format="auto"
+        data-full-width-responsive="true"
       />
-      {note && (
-        <p className="mt-2 text-xs text-gray-500">{note}</p>
-      )}
+      {note && <p className="mt-2 text-xs text-gray-500">{note}</p>}
     </div>
   );
 }
