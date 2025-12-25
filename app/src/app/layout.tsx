@@ -18,6 +18,9 @@ export const metadata: Metadata = {
   title: "Micro SaaS Factory | JSON-driven calculators",
   description:
     "A JSON-driven micro SaaS factory that ships SEO-friendly calculators with zero-code deployments.",
+  other: {
+    "google-adsense-account": "ca-pub-1856020780538432",
+  },
 };
 
 export default function RootLayout({
@@ -28,10 +31,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        {/* eslint-disable-next-line @next/next/no-page-custom-font */}
-        <script
+        <Script
           async
           src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1856020780538432"
+          strategy="afterInteractive"
           crossOrigin="anonymous"
         />
         <script
