@@ -30,18 +30,21 @@ export function AdSlot({ slotName = "global", note }: Props) {
   useEffect(() => {
     if (adsEnabled && key > 0) {
       try {
-        if (typeof window !== "undefined" && window.adsbygoogle) {
-          // Check if it's already filled
+        if (typeof window !== "undefined") {
+          // Initialize adsbygoogle if it doesn't exist
+          window.adsbygoogle = window.adsbygoogle || [];
+          
           const ins = containerRef.current?.querySelector("ins");
           if (ins && ins.innerHTML.trim() === "") {
-            (window.adsbygoogle = window.adsbygoogle || []).push({});
+            console.log("Pushing ad for slot:", slotName);
+            (window.adsbygoogle as any[]).push({});
           }
         }
       } catch (e) {
         console.error("AdSense push error:", e);
       }
     }
-  }, [adsEnabled, key]);
+  }, [adsEnabled, key, slotName]);
 
   if (!adsEnabled) return null;
 
