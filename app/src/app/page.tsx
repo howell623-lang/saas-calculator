@@ -82,6 +82,37 @@ export default function Home() {
           </div>
         ))}
       </section>
+
+      <section className="space-y-12 rounded-3xl bg-white/80 p-10 shadow-lg shadow-gray-200/60 ring-1 ring-gray-100 backdrop-blur-sm">
+        <div className="prose prose-gray max-w-none">
+          <h2 className="text-3xl font-bold text-gray-900">Professional Calculation Factory</h2>
+          <p className="text-lg leading-8 text-gray-700">
+            Welcome to CalcPanda, your premier destination for precise and reliable calculation tools. In an era where data drives decisions, we provide a streamlined, high-performance platform that transforms complex formulas into instant answers. Our "Micro-SaaS Factory" approach ensures that whether you are a financial analyst, a health enthusiast, or an engineer, you have access to specialized tools designed with accuracy and user experience in mind.
+          </p>
+          
+          <div className="mt-8 grid gap-8 md:grid-cols-2">
+            <div>
+              <h3 className="text-xl font-semibold text-gray-900">Why Accuracy Matters</h3>
+              <p className="mt-2 text-gray-700">
+                A single decimal point can change a financial projection or a medical dosage. That's why every tool on CalcPanda is built using validated formulas and undergoes rigorous logic testing. We don't just provide numbers; we provide peace of mind through transparency and precision.
+              </p>
+            </div>
+            <div>
+              <h3 className="text-xl font-semibold text-gray-900">Community & Innovation</h3>
+              <p className="mt-2 text-gray-700">
+                CalcPanda is more than just a toolset; it's a growing ecosystem. We listen to our users and constantly expand our library based on real-world needs. From multi-leg flight carbon estimators to complex debt snowball accelerators, our tools are crafted to solve actual problems faced by our global community.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap justify-center gap-8 border-t border-gray-100 pt-10 text-sm font-medium text-gray-500">
+          <Link href="/about" className="hover:text-gray-900 transition">About Us</Link>
+          <Link href="/privacy" className="hover:text-gray-900 transition">Privacy Policy</Link>
+          <Link href="/terms" className="hover:text-gray-900 transition">Terms of Service</Link>
+          <Link href="/contact" className="hover:text-gray-900 transition">Contact Us</Link>
+        </div>
+      </section>
     </div>
   );
 }
