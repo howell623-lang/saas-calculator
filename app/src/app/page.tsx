@@ -107,6 +107,7 @@ export default function Home() {
         </div>
 
         <div className="flex flex-wrap justify-center gap-8 border-t border-gray-100 pt-10 text-sm font-medium text-gray-500">
+          <Link href="/index" className="hover:text-gray-900 transition font-bold text-gray-900">A-Z Index</Link>
           <Link href="/about" className="hover:text-gray-900 transition">About Us</Link>
           <Link href="/privacy" className="hover:text-gray-900 transition">Privacy Policy</Link>
           <Link href="/terms" className="hover:text-gray-900 transition">Terms of Service</Link>
