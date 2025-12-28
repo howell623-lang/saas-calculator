@@ -15,9 +15,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Micro SaaS Factory | JSON-driven calculators",
+  title: "CalcPanda | Professional Online Calculators",
   description:
-    "A JSON-driven micro SaaS factory that ships SEO-friendly calculators with zero-code deployments.",
+    "CalcPanda is a professional online calculation factory that provides accurate, SEO-friendly tools for finance, health, and engineering with real-world insights.",
   other: {
     "google-adsense-account": "ca-pub-1856020780538432",
   },

@@ -42,7 +42,7 @@ export default function InsightsPage() {
       </header>
 
       <div className="grid gap-8 md:grid-cols-2">
-        {INSIGHTS.map((article) => (
+        {INSIGHTS.map((article: Article) => (
           <article key={article.slug} className="group flex flex-col gap-4 rounded-3xl bg-white p-8 shadow-lg ring-1 ring-gray-100 transition hover:-translate-y-1 hover:shadow-xl">
             <div className="flex items-center gap-2">
               <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-bold text-blue-700 uppercase tracking-wider">

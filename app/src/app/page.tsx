@@ -9,41 +9,6 @@ export default function Home() {
   const tools = loadAllToolConfigs();
   return (
     <div className="mx-auto flex min-h-screen max-w-6xl flex-col gap-10 px-6 py-16 md:py-20">
-      {/* Featured Insight Banner */}
-      <section className="relative overflow-hidden rounded-3xl bg-gray-900 p-8 text-white shadow-2xl md:p-12">
-        <div className="relative z-10 flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
-          <div className="space-y-4 max-w-2xl">
-            <span className="inline-block rounded-full bg-blue-500 px-3 py-1 text-xs font-bold uppercase tracking-widest text-white">
-              Featured Insight
-            </span>
-            <h2 className="text-3xl font-bold md:text-4xl">
-              {INSIGHTS[0].title}
-            </h2>
-            <p className="text-gray-300 text-lg">
-              {INSIGHTS[0].summary}
-            </p>
-            <div className="flex flex-wrap gap-4 pt-2">
-              <Link
-                href={`/insights/${INSIGHTS[0].slug}`}
-                className="inline-flex items-center gap-2 rounded-2xl bg-white px-6 py-3 text-sm font-bold text-gray-900 transition hover:bg-gray-100"
-              >
-                Read Full Story
-              </Link>
-              <Link
-                href={`/${INSIGHTS[0].relatedTool}`}
-                className="inline-flex items-center gap-2 rounded-2xl bg-white/10 px-6 py-3 text-sm font-bold text-white ring-1 ring-white/20 backdrop-blur-sm transition hover:bg-white/20"
-              >
-                Try the Calculator
-              </Link>
-            </div>
-          </div>
-          <div className="hidden lg:block">
-            <div className="relative h-40 w-40 animate-pulse rounded-full bg-blue-500/20 blur-3xl" />
-            <span className="absolute right-20 top-1/2 -translate-y-1/2 text-8xl opacity-20 select-none">📈</span>
-          </div>
-        </div>
-      </section>
-
       <header className="flex flex-col gap-6 rounded-3xl bg-white/70 p-10 shadow-lg shadow-gray-200/60 ring-1 ring-gray-100 backdrop-blur-sm md:flex-row md:items-center md:justify-between">
         <div className="space-y-4">
           <p className="text-sm font-semibold uppercase tracking-[0.2em] text-gray-500">
@@ -84,6 +49,41 @@ export default function Home() {
           </ul>
         </div>
       </header>
+
+      {/* Featured Insight Banner - Moved to 2nd position */}
+      <section className="relative overflow-hidden rounded-3xl bg-gray-900 p-8 text-white shadow-2xl md:p-12">
+        <div className="relative z-10 flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+          <div className="space-y-4 max-w-2xl">
+            <span className="inline-block rounded-full bg-blue-500 px-3 py-1 text-xs font-bold uppercase tracking-widest text-white">
+              Featured Insight
+            </span>
+            <h2 className="text-3xl font-bold md:text-4xl">
+              {INSIGHTS[0].title}
+            </h2>
+            <p className="text-gray-300 text-lg">
+              {INSIGHTS[0].summary}
+            </p>
+            <div className="flex flex-wrap gap-4 pt-2">
+              <Link
+                href={`/insights/${INSIGHTS[0].slug}`}
+                className="inline-flex items-center gap-2 rounded-2xl bg-white px-6 py-3 text-sm font-bold text-gray-900 transition hover:bg-gray-100"
+              >
+                Read Full Story
+              </Link>
+              <Link
+                href={`/${INSIGHTS[0].relatedTool}`}
+                className="inline-flex items-center gap-2 rounded-2xl bg-white/10 px-6 py-3 text-sm font-bold text-white ring-1 ring-white/20 backdrop-blur-sm transition hover:bg-white/20"
+              >
+                Try the Calculator
+              </Link>
+            </div>
+          </div>
+          <div className="hidden lg:block">
+            <div className="relative h-40 w-40 animate-pulse rounded-full bg-blue-500/20 blur-3xl" />
+            <span className="absolute right-20 top-1/2 -translate-y-1/2 text-8xl opacity-20 select-none">📈</span>
+          </div>
+        </div>
+      </section>
 
       <AdSlot slotName="home-top" note="Sponsored" />
 
