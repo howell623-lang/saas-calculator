@@ -28,14 +28,16 @@ export function AdSlot({ slotName = "global", note }: Props) {
   }, [adsEnabled]);
 
   useEffect(() => {
-    if (adsEnabled && key > 0) {
+    if (!adsEnabled || key === 0) return;
+
+    const pushAd = () => {
       try {
         if (typeof window !== "undefined") {
-          // Initialize adsbygoogle if it doesn't exist
           window.adsbygoogle = window.adsbygoogle || [];
           
           const ins = containerRef.current?.querySelector("ins");
-          if (ins && ins.innerHTML.trim() === "") {
+          // Check if it's an ad-filled element or already has content
+          if (ins && ins.getAttribute("data-ad-status") !== "filled" && ins.innerHTML.trim() === "") {
             console.log("Pushing ad for slot:", slotName);
             (window.adsbygoogle as any[]).push({});
           }
@@ -43,7 +45,11 @@ export function AdSlot({ slotName = "global", note }: Props) {
       } catch (e) {
         console.error("AdSense push error:", e);
       }
-    }
+    };
+
+    // Small delay to ensure DOM is ready and script might have initialized
+    const timer = setTimeout(pushAd, 300);
+    return () => clearTimeout(timer);
   }, [adsEnabled, key, slotName]);
 
   if (!adsEnabled) return null;
