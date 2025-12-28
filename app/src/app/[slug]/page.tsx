@@ -1,6 +1,7 @@
 import { AdSlot } from "@/components/ad-slot";
 import { AdsToggle } from "@/components/ads-toggle";
 import { DynamicCalculator } from "@/components/dynamic-calculator";
+import { ToolInteractions } from "@/components/tool-interactions";
 import { loadAllToolConfigs, loadToolConfig, listToolSlugs } from "@/lib/tool-loader";
 import { ToolConfig } from "@/lib/types";
 import { Metadata } from "next";
@@ -118,6 +119,8 @@ export default async function ToolPage({ params }: PageProps) {
 
         <AdSlot slotName="below-calculator" note="Sponsored" />
       </section>
+
+      <ToolInteractions toolSlug={slug} />
 
       {tool.faq?.length ? (
         <section className="space-y-4 rounded-3xl bg-white/80 p-8 shadow-lg shadow-gray-200/60 ring-1 ring-gray-100 backdrop-blur-sm">
