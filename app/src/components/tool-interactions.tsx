@@ -27,19 +27,30 @@ export function ToolInteractions({ toolSlug }: Props) {
     const daily = Math.floor(Date.now() / 86400000) % 50;
     setUsageCount(base + daily);
 
-    // Initial mock comments
+    // Dynamic mock comments based on tool
+    const authors = ["Michael R.", "Jessica W.", "David L.", "Emma B.", "Chris P.", "Anna S."];
+    const commentPool = [
+      `Just used this ${toolSlug.replace(/-/g, ' ')} for my project, very reliable results.`,
+      "Exactly what I was looking for, saved me a lot of time on formulas.",
+      "The explanation at the bottom is very helpful to understand the logic.",
+      "Professional tool, will definitely bookmark this.",
+      "Interface is clean and the calculation is instantaneous.",
+      "Helping our team with daily estimations, great work!"
+    ];
+    
+    const seed = hash % authors.length;
     const mockComments: Comment[] = [
       {
         id: "1",
-        author: "Alex Thompson",
-        content: "This tool helped me save 2 hours of manual work today. Very accurate!",
-        date: "2 days ago",
+        author: authors[seed],
+        content: commentPool[seed],
+        date: `${(hash % 5) + 1} days ago`,
       },
       {
         id: "2",
-        author: "Sarah J.",
-        content: "Case Study: Used this for our Q4 planning. The results were within 1% of our professional audit.",
-        date: "1 week ago",
+        author: authors[(seed + 1) % authors.length],
+        content: `Case Study: We integrated this ${toolSlug.replace(/-/g, ' ')} into our weekly workflow. It significantly improved our accuracy.`,
+        date: `${(hash % 3) + 2} weeks ago`,
         isUserCase: true,
       },
     ];

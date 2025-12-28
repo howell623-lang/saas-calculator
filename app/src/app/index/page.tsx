@@ -25,13 +25,13 @@ export default function IndexPage() {
 
       <nav className="flex flex-wrap gap-2 rounded-2xl bg-gray-50 p-6 ring-1 ring-gray-200">
         {sortedLetters.map(letter => (
-          <a 
+          <Link 
             key={letter} 
             href={`#letter-${letter}`}
             className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-sm font-bold text-gray-900 shadow-sm ring-1 ring-gray-200 transition hover:bg-gray-900 hover:text-white"
           >
             {letter}
-          </a>
+          </Link>
         ))}
       </nav>
 
