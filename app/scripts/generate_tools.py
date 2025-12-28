@@ -430,23 +430,27 @@ def generate_with_gemini(topic: str, api_key: str) -> ToolConfig | None:
     if not HAS_GENAI:
         return None
     genai.configure(api_key=api_key)
-    prompt = f"""You are generating a JSON config for a calculator about "{topic}".
+    prompt = f"""You are generating a high-quality, professional JSON config for a calculator about "{topic}".
 Return only valid JSON with fields: slug, title, seo{{title,description}}, summary,
 inputs[id,label,type(number|text),placeholder,required,step?],
 outputs[id,label,unit?,precision?],
 formula (JavaScript body returning an object), cta,
 faq(list of {{q,a}} 5-8 items), tags(list of strings),
 related(slugs of similar tools), article(list of sections with heading, body).
-Constraints:
-- 3-8 inputs, at least 2 outputs. Use realistic domain units and steps.
-- Formula must include multiple operations (not just single multiply/divide), e.g., ratios, exponent, conditionals/ternary, caps.
-- Article: ~800 words total, EXACT sections:
-  1) "Why use this {topic}?"
-  2) "How the calculation works"
-  3) "Common mistakes in {topic}"
-- FAQ: 5-8 helpful, non-duplicated items.
-- Slug must be URL-safe (lowercase, hyphenated).
-Respond with JSON only."""
+
+Constraints for "High Value Content":
+- inputs: 4-10 professional inputs. Use realistic domain units and granular steps.
+- formula: Must be a robust, multi-step calculation. Include edge case handling, caps, and logical branches.
+- article: At least 1000 words of high-quality, original-sounding content. Avoid generic filler.
+  Sections required:
+  1) "The Importance of {topic} in Modern Context" (Deep dive into the 'why')
+  2) "In-Depth Technical Guide: How the Calculation Works" (Explain the math/logic clearly)
+  3) "Real-World Application Scenarios" (Describe 2-3 detailed personas or situations where this tool is used)
+  4) "Advanced Considerations and Potential Pitfalls" (Professional advice on limitations)
+- FAQ: 8 unique, high-quality questions and answers that address user intent.
+- Slug: URL-safe, lowercase.
+
+Respond with JSON only, ensuring the content feels written by an expert in the field."""
     model = genai.GenerativeModel(MODEL_NAME)
     try:
         response = model.generate_content(prompt, request_options={"timeout": 120})

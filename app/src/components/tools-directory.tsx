@@ -24,6 +24,8 @@ export function ToolsDirectory({ tools }: Props) {
       .slice(0, 30);
   }, [tools]);
 
+  const [showMore, setShowMore] = useState(false);
+
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
     return tools.filter((tool) => {
@@ -37,6 +39,13 @@ export function ToolsDirectory({ tools }: Props) {
       return matchesSearch && matchesTag;
     });
   }, [search, tagFilter, tools]);
+
+  const displayedTools = useMemo(() => {
+    if (showMore || search.trim() !== "" || tagFilter !== null) {
+      return filtered;
+    }
+    return filtered.slice(0, 10);
+  }, [filtered, showMore, search, tagFilter]);
 
   return (
     <section className="space-y-6 rounded-3xl bg-white/80 p-8 shadow-lg shadow-gray-200/60 ring-1 ring-gray-100 backdrop-blur-sm">
@@ -105,7 +114,7 @@ export function ToolsDirectory({ tools }: Props) {
             </span>
           </div>
           <div className="grid gap-4 md:grid-cols-2">
-            {filtered.map((tool) => (
+            {displayedTools.map((tool) => (
               <Link
                 key={tool.slug}
                 href={`/${tool.slug}`}
@@ -147,6 +156,20 @@ export function ToolsDirectory({ tools }: Props) {
               </div>
             )}
           </div>
+
+          {!showMore &&
+            filtered.length > 10 &&
+            search.trim() === "" &&
+            tagFilter === null && (
+              <div className="flex justify-center pt-4">
+                <button
+                  onClick={() => setShowMore(true)}
+                  className="rounded-2xl bg-white px-6 py-3 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-gray-200 transition hover:-translate-y-0.5 hover:ring-gray-300"
+                >
+                  Show all {filtered.length} calculators
+                </button>
+              </div>
+            )}
         </div>
       </div>
     </section>
