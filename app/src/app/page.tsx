@@ -11,9 +11,16 @@ export default function Home() {
     <div className="mx-auto flex min-h-screen max-w-6xl flex-col gap-10 px-6 py-16 md:py-20">
       <header className="flex flex-col gap-6 rounded-3xl bg-white/70 p-10 shadow-lg shadow-gray-200/60 ring-1 ring-gray-100 backdrop-blur-sm md:flex-row md:items-center md:justify-between">
         <div className="space-y-4">
-          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-gray-500">
-            Calculator Hub
-          </p>
+          <div className="flex items-center gap-2">
+            <span className="text-2xl" role="img" aria-label="Panda logo">🐼</span>
+            <p className="text-xl font-bold tracking-tight text-gray-900">
+              CalcPanda
+            </p>
+            <span className="h-4 w-px bg-gray-300" />
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-500">
+              Calculator Hub
+            </p>
+          </div>
           <h1 className="text-3xl font-semibold text-gray-900 sm:text-4xl">
             Professional tools for every decision
           </h1>
