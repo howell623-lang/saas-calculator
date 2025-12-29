@@ -83,6 +83,11 @@ export default async function ToolPage({ params }: PageProps) {
   }
   const related = getRelatedTools(tool);
 
+  // Recommendations logic (internal cross-linking)
+  const recommendations = loadAllToolConfigs()
+    .filter((t) => t.slug !== tool.slug && t.tags?.some(tag => tool.tags?.includes(tag)))
+    .slice(0, 3);
+
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
@@ -147,6 +152,24 @@ export default async function ToolPage({ params }: PageProps) {
       </section>
 
       <ToolInteractions toolSlug={slug} />
+
+      {recommendations.length > 0 && (
+        <section className="space-y-4 rounded-3xl bg-gray-50/50 p-8 ring-1 ring-gray-100">
+          <h2 className="text-xl font-bold text-gray-900">You might also need...</h2>
+          <div className="grid gap-4 sm:grid-cols-3">
+            {recommendations.map((t) => (
+              <Link
+                key={t.slug}
+                href={`/${t.slug}`}
+                className="group flex flex-col gap-2 rounded-2xl bg-white p-4 shadow-sm transition hover:-translate-y-1 hover:shadow-md"
+              >
+                <p className="font-bold text-gray-900 text-sm group-hover:text-blue-600 transition truncate">{t.title}</p>
+                <p className="text-[10px] text-gray-500 line-clamp-2">{t.summary}</p>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
 
       {tool.faq?.length ? (
         <section className="space-y-4 rounded-3xl bg-white/80 p-8 shadow-lg shadow-gray-200/60 ring-1 ring-gray-100 backdrop-blur-sm">
