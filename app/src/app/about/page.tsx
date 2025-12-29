@@ -32,11 +32,28 @@ export default function AboutPage() {
         </section>
 
         <section className="space-y-4">
-          <h2 className="text-2xl font-semibold text-gray-900">Commitment to Quality</h2>
+          <h2 className="text-2xl font-semibold text-gray-900">Editorial & Calculation Standards</h2>
           <p>
-            Every calculator on our platform is built with rigorous logic and tested for accuracy. 
-            We value user privacy and transparency, offering a distraction-free experience with an optional ad-free mode.
+            Accuracy is the cornerstone of CalcPanda. Our editorial team follows a strict protocol to ensure every tool provides reliable data:
           </p>
+          <div className="grid gap-6 md:grid-cols-2">
+            <div className="rounded-2xl bg-gray-50 p-6 ring-1 ring-gray-100">
+              <h3 className="font-bold text-gray-900 mb-2">Verified Methodologies</h3>
+              <p className="text-sm">We base our formulas on industry-recognized standards, including WHO health guidelines, standard financial amortization protocols, and ISO engineering constants.</p>
+            </div>
+            <div className="rounded-2xl bg-gray-50 p-6 ring-1 ring-gray-100">
+              <h3 className="font-bold text-gray-900 mb-2">Rigid Testing</h3>
+              <p className="text-sm">Before deployment, each calculator undergoes multi-layer validation against manual professional audits to eliminate logical errors.</p>
+            </div>
+            <div className="rounded-2xl bg-gray-50 p-6 ring-1 ring-gray-100">
+              <h3 className="font-bold text-gray-900 mb-2">Source Transparency</h3>
+              <p className="text-sm">We cite authoritative references for our logic, providing users with the mathematical breakdown behind every result.</p>
+            </div>
+            <div className="rounded-2xl bg-gray-50 p-6 ring-1 ring-gray-100">
+              <h3 className="font-bold text-gray-900 mb-2">Regular Audits</h3>
+              <p className="text-sm">Our tools are periodically reviewed to reflect the latest regulatory changes in tax laws, health standards, and financial rates.</p>
+            </div>
+          </div>
         </section>
 
         <section className="space-y-4">
