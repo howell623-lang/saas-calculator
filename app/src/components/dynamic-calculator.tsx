@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { InputField, OutputField, ToolConfig, ToolResult } from "@/lib/types";
 
 type Props = {
@@ -48,6 +48,28 @@ export function DynamicCalculator({ config }: Props) {
   const [result, setResult] = useState<ToolResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showSteps, setShowSteps] = useState(false);
+  const [isFavorite, setIsFavorite] = useState(false);
+
+  useEffect(() => {
+    const saved = localStorage.getItem("calcpanda_favorites");
+    if (saved) {
+      const favs = JSON.parse(saved);
+      setIsFavorite(favs.includes(config.slug));
+    }
+  }, [config.slug]);
+
+  const toggleFavorite = () => {
+    const saved = localStorage.getItem("calcpanda_favorites");
+    let favs = saved ? JSON.parse(saved) : [];
+    if (favs.includes(config.slug)) {
+      favs = favs.filter((s: string) => s !== config.slug);
+      setIsFavorite(false);
+    } else {
+      favs.push(config.slug);
+      setIsFavorite(true);
+    }
+    localStorage.setItem("calcpanda_favorites", JSON.stringify(favs));
+  };
 
   const inputErrors = useMemo(() => {
     const errors: string[] = [];

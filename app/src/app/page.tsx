@@ -4,6 +4,7 @@ import { AdsToggle } from "@/components/ads-toggle";
 import { loadAllToolConfigs } from "@/lib/tool-loader";
 import { ToolsDirectory } from "@/components/tools-directory";
 import { INSIGHTS } from "./insights/page";
+import { FavoritesManager } from "@/components/favorites-manager";
 
 export default function Home() {
   const tools = loadAllToolConfigs();
@@ -94,18 +95,20 @@ export default function Home() {
 
       <AdSlot slotName="home-top" note="Sponsored" />
 
+      <FavoritesManager tools={tools} />
+
       <ToolsDirectory tools={tools} />
 
-      <section className="space-y-6">
+      <section className="space-y-6" id="categories">
         <h2 className="text-2xl font-bold text-gray-900">Explore by Category</h2>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {[
-            { name: "Finance", icon: "💰", tools: ["loan-amortization-calculator", "cagr-calculator", "mortgage-extra-payment"] },
-            { name: "Health", icon: "🏥", tools: ["bmi-calculator", "calorie-deficit-weight-loss", "macronutrient-calculator"] },
-            { name: "Engineering", icon: "⚙️", tools: ["advanced-structural-beam-analysis", "concrete-slab-calculator", "hvac-duct-sizing-cfm-velocity-friction-loss"] },
-            { name: "Lifestyle", icon: "🌟", tools: ["dog-chocolate-toxicity-calculator", "garden-plant-spacing-yield", "home-emergency-kit-cost-duration"] }
+            { name: "Finance", icon: "💰", id: "finance", tools: ["loan-amortization-calculator", "cagr-calculator", "mortgage-extra-payment"] },
+            { name: "Health", icon: "🏥", id: "health", tools: ["bmi-calculator", "calorie-deficit-weight-loss", "macronutrient-calculator"] },
+            { name: "Engineering", icon: "⚙️", id: "engineering", tools: ["advanced-structural-beam-analysis", "concrete-slab-calculator", "hvac-duct-sizing-cfm-velocity-friction-loss"] },
+            { name: "Lifestyle", icon: "🌟", id: "lifestyle", tools: ["dog-chocolate-toxicity-calculator", "garden-plant-spacing-yield", "home-emergency-kit-cost-duration"] }
           ].map(cat => (
-            <div key={cat.name} className="rounded-3xl bg-white/60 p-6 shadow-sm ring-1 ring-gray-100 backdrop-blur-sm">
+            <div key={cat.name} id={cat.id} className="scroll-mt-20 rounded-3xl bg-white/60 p-6 shadow-sm ring-1 ring-gray-100 backdrop-blur-sm">
               <div className="flex items-center gap-3 mb-4">
                 <span className="text-2xl">{cat.icon}</span>
                 <h3 className="font-bold text-gray-900">{cat.name}</h3>
