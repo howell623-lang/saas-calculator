@@ -96,6 +96,37 @@ export default function Home() {
 
       <ToolsDirectory tools={tools} />
 
+      <section className="space-y-6">
+        <h2 className="text-2xl font-bold text-gray-900">Explore by Category</h2>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {[
+            { name: "Finance", icon: "💰", tools: ["loan-amortization-calculator", "cagr-calculator", "mortgage-extra-payment"] },
+            { name: "Health", icon: "🏥", tools: ["bmi-calculator", "calorie-deficit-weight-loss", "macronutrient-calculator"] },
+            { name: "Engineering", icon: "⚙️", tools: ["advanced-structural-beam-analysis", "concrete-slab-calculator", "hvac-duct-sizing-cfm-velocity-friction-loss"] },
+            { name: "Lifestyle", icon: "🌟", tools: ["dog-chocolate-toxicity-calculator", "garden-plant-spacing-yield", "home-emergency-kit-cost-duration"] }
+          ].map(cat => (
+            <div key={cat.name} className="rounded-3xl bg-white/60 p-6 shadow-sm ring-1 ring-gray-100 backdrop-blur-sm">
+              <div className="flex items-center gap-3 mb-4">
+                <span className="text-2xl">{cat.icon}</span>
+                <h3 className="font-bold text-gray-900">{cat.name}</h3>
+              </div>
+              <ul className="space-y-2">
+                {cat.tools.slice(0, 3).map(t => {
+                  const tool = tools.find(x => x.slug === t);
+                  return (
+                    <li key={t}>
+                      <Link href={`/${t}`} className="text-sm text-gray-600 hover:text-blue-600 transition truncate block">
+                        • {tool?.title || t.replace(/-/g, ' ')}
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ))}
+        </div>
+      </section>
+
       <section
         id="how-it-works"
         className="grid gap-6 rounded-3xl bg-white/80 p-10 shadow-lg shadow-gray-200/60 ring-1 ring-gray-100 backdrop-blur-sm md:grid-cols-3"
