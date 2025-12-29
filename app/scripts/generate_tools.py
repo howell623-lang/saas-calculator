@@ -436,11 +436,13 @@ inputs[id,label,type(number|text),placeholder,required,step?],
 outputs[id,label,unit?,precision?],
 formula (JavaScript body returning an object), cta,
 faq(list of {{q,a}} 5-8 items), tags(list of strings),
-related(slugs of similar tools), article(list of sections with heading, body).
+    related(slugs of similar tools), article(list of sections with heading, body),
+    calculationSteps(list of strings describing the math).
 
 Constraints for "High Value Content":
 - inputs: 4-10 professional inputs. Use realistic domain units and granular steps.
 - formula: Must be a robust, multi-step calculation. Include edge case handling, caps, and logical branches.
+- calculationSteps: 3-6 clear, numbered steps explaining how the inputs become the outputs.
 - article: At least 1000 words of high-quality, original-sounding content. Avoid generic filler.
   Sections required:
   1) "The Importance of {topic} in Modern Context" (Deep dive into the 'why')
