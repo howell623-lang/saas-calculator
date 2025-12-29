@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { INSIGHTS } from "./page";
+import { INSIGHTS, Article } from "../page";
 
 type PageProps = {
   params: Promise<{ slug: string }>;
@@ -7,7 +7,7 @@ type PageProps = {
 
 export default async function InsightDetailPage({ params }: PageProps) {
   const { slug } = await params;
-  const article = INSIGHTS.find((a) => a.slug === slug);
+  const article = INSIGHTS.find((a: Article) => a.slug === slug);
 
   if (!article) {
     return (
