@@ -1,0 +1,164 @@
+{
+  "slug": "fantasy-sports-player-value-predictor",
+  "title": "Fantasy Sports Player Value Predictor",
+  "seo": {
+    "title": "Fantasy Sports Player Value Predictor | Project Future Performance & Market Value",
+    "description": "Leverage advanced analytics to predict a fantasy sports player's projected points and market value. Analyze recent performance, injury status, opponent strength, and historical trends for smarter drafting and trading in your fantasy league."
+  },
+  "inputs": [
+    {
+      "id": "recentAvgPoints",
+      "label": "Recent Average Points (e.g., Last 3-5 Games)",
+      "type": "number",
+      "placeholder": "e.g., 18.5 (for current form)",
+      "required": true,
+      "step": 0.1
+    },
+    {
+      "id": "recentGameCount",
+      "label": "Number of Recent Games Included in Average",
+      "type": "number",
+      "placeholder": "e.g., 3",
+      "required": true,
+      "step": 1
+    },
+    {
+      "id": "injuryImpactFactor",
+      "label": "Current Injury Impact Factor (0 = Healthy, 1 = Severely Impacted)",
+      "type": "number",
+      "placeholder": "e.g., 0.1 (minor ding), 0.5 (moderate injury)",
+      "required": true,
+      "step": 0.05
+    },
+    {
+      "id": "opponentDefensiveRank",
+      "label": "Opponent's Defensive Rank (1 = Best, 32 = Worst)",
+      "type": "number",
+      "placeholder": "e.g., 5 (tough opponent), 28 (easy opponent)",
+      "required": true,
+      "step": 1
+    },
+    {
+      "id": "historicalAvgPoints",
+      "label": "Player's Historical Career/Season Average Points",
+      "type": "number",
+      "placeholder": "e.g., 15.0 (for career baseline)",
+      "required": true,
+      "step": 0.1
+    },
+    {
+      "id": "expectedRoleMultiplier",
+      "label": "Expected Role/Volume Multiplier (0.5 = Reduced, 1.0 = Same, 1.5 = Increased)",
+      "type": "number",
+      "placeholder": "e.g., 1.2 (more targets/carries)",
+      "required": true,
+      "step": 0.05
+    },
+    {
+      "id": "ageFactor",
+      "label": "Player Age Impact Factor (0.8 = Declining, 1.0 = Prime, 1.2 = Rising Star)",
+      "type": "number",
+      "placeholder": "e.g., 0.9 (veteran decline), 1.1 (young upside)",
+      "required": true,
+      "step": 0.02
+    },
+    {
+      "id": "adpValue",
+      "label": "Current Average Draft Position (ADP) or Market Rank (1 = Earliest Pick, 200 = Latest)",
+      "type": "number",
+      "placeholder": "e.g., 25 (early pick), 120 (mid-round)",
+      "required": true,
+      "step": 1
+    }
+  ],
+  "outputs": [
+    {
+      "id": "projectedPoints",
+      "label": "Projected Fantasy Points",
+      "unit": "points",
+      "precision": 2
+    },
+    {
+      "id": "marketValueScore",
+      "label": "Predicted Market Value Score",
+      "unit": "/200",
+      "precision": 0
+    },
+    {
+      "id": "draftRecommendation",
+      "label": "Draft/Trade Recommendation"
+    }
+  ],
+  "formula": "const recentGameCount = inputs.recentGameCount;\nconst recentAvgPoints = inputs.recentAvgPoints;\nconst historicalAvgPoints = inputs.historicalAvgPoints;\nconst injuryImpactFactor = inputs.injuryImpactFactor;\nconst opponentDefensiveRank = inputs.opponentDefensiveRank;\nconst expectedRoleMultiplier = inputs.expectedRoleMultiplier;\nconst ageFactor = inputs.ageFactor;\nconst adpValue = inputs.adpValue;\n\n// Input validation and default values for robustness\nconst validatedRecentGameCount = Math.max(0, recentGameCount || 0);\nconst validatedRecentAvgPoints = recentAvgPoints || 0;\nconst validatedHistoricalAvgPoints = historicalAvgPoints || 0;\nconst validatedInjuryImpactFactor = Math.max(0, Math.min(1, injuryImpactFactor || 0));\nconst validatedOpponentDefensiveRank = Math.max(1, Math.min(32, opponentDefensiveRank || 16)); // Default to average rank\nconst validatedExpectedRoleMultiplier = Math.max(0.5, Math.min(1.5, expectedRoleMultiplier || 1)); // Default to 1 (no change)\nconst validatedAgeFactor = Math.max(0.8, Math.min(1.2, ageFactor || 1)); // Default to 1 (prime)\nconst validatedAdpValue = Math.max(1, Math.min(200, adpValue || 150)); // Default to a later pick if not provided\n\nlet basePoints;\n// Weight recent performance more heavily if there's sufficient recent data\nconst recentWeight = validatedRecentGameCount > 0 ? Math.min(1, validatedRecentGameCount / 8) : 0; // Up to 8 games for full recent weight\nconst historicalWeight = 1 - recentWeight;\n\nif (validatedRecentGameCount === 0 && validatedHistoricalAvgPoints === 0) {\n    basePoints = 5; // Default low base points if no data at all\n} else if (validatedRecentGameCount === 0) {\n    basePoints = validatedHistoricalAvgPoints; // Only historical data available\n} else if (validatedHistoricalAvgPoints === 0) {\n    basePoints = validatedRecentAvgPoints; // Only recent data available\n} else {\n    basePoints = (validatedRecentAvgPoints * recentWeight) + (validatedHistoricalAvgPoints * historicalWeight);\n}\n\n// Ensure basePoints is never negative or excessively low baseline\nbasePoints = Math.max(0.1, basePoints);\n\n// Adjust for injury status: A higher factor means a greater point reduction.\nlet adjustedPoints = basePoints * (1 - validatedInjuryImpactFactor);\n\n// Adjust for opponent strength: Lower rank (e.g., 1) means tougher defense, higher rank (e.g., 32) means easier.\n// The formula applies a potential swing of +/- 15% for extreme matchups.\n// Average rank is 16. (16 - rank) will be positive for tough opps, negative for easy.\nconst opponentImpact = 1 + ((16 - validatedOpponentDefensiveRank) / 32) * 0.15; \nadjustedPoints *= opponentImpact;\n\n// Adjust for expected role/volume: Directly scales projected points.\nadjustedPoints *= validatedExpectedRoleMultiplier;\n\n// Adjust for age-related performance: Accounts for rising stars or declining veterans.\nadjustedPoints *= validatedAgeFactor;\n\n// Final projected points, capped at a realistic maximum for fantasy scoring (e.g., 50 points per game)\nconst projectedPoints = Math.max(0, Math.min(50, adjustedPoints));\n\n// Calculate Market Value Score\n// This score compares the player's projected performance against their market perception (ADP).\n// Higher projected points and lower ADP (meaning they are drafted earlier, but perhaps still a bargain) result in a higher value score.\n\n// Normalize projected points to a scale where typical elite performance (e.g., 25 points) is a benchmark.\nconst pointsNormalized = projectedPoints / 25; \n\n// Normalize ADP: Lower ADP (closer to 1) should yield a higher value component.\n// ADP of 1 yields (200-1)/100 = 1.99; ADP of 200 yields (200-200)/100 = 0.\nconst adpNormalized = (200 - validatedAdpValue) / 100; \n\n// Market value is a weighted average of normalized points and normalized ADP.\n// Projected points are given more weight as they represent on-field performance.\nconst marketValueScore = (pointsNormalized * 0.7 + adpNormalized * 0.3) * 100;\n// Cap market value score between 0 and 200 for clarity.\nconst finalMarketValueScore = Math.round(Math.max(0, Math.min(200, marketValueScore)));\n\nlet draftRecommendation;\nif (finalMarketValueScore >= 140) {\n    draftRecommendation = \"Elite Value Pick\";\n} else if (finalMarketValueScore >= 110) {\n    draftRecommendation = \"Strong Value Pick\";\n} else if (finalMarketValueScore >= 80) {\n    draftRecommendation = \"Fair Value Pick\";\n} else if (finalMarketValueScore >= 50) {\n    draftRecommendation = \"Situational Pick\";\n} else {\n    draftRecommendation = \"Risky Pick / Avoid\";\n}\n\nreturn {\n    projectedPoints: parseFloat(projectedPoints.toFixed(2)),\n    marketValueScore: finalMarketValueScore,\n    draftRecommendation: draftRecommendation\n};",
+  "summary": "This advanced Fantasy Sports Player Value Predictor utilizes a sophisticated algorithm to forecast a player's projected fantasy points and their relative market value. By integrating crucial factors such as recent performance, current injury status, the strength of their upcoming opponent, historical career trends, and a player's expected role, it provides data-driven insights to optimize your draft, trade, and waiver wire decisions.",
+  "cta": "Calculate Your Player's True Fantasy Value",
+  "faq": [
+    {
+      "q": "What is the Fantasy Sports Player Value Predictor?",
+      "a": "The Fantasy Sports Player Value Predictor is an analytical tool designed to help fantasy sports managers make more informed decisions. It calculates a player's projected fantasy points and assigns a relative market value score by analyzing key performance indicators, injury status, opponent strength, and historical data. This helps identify undervalued assets for drafting, trading, or waiver wire pickups."
+    },
+    {
+      "q": "How accurate are the predictions from this tool?",
+      "a": "While this tool uses a robust, multi-factor algorithm, fantasy sports inherently involve unpredictability. The accuracy relies heavily on the quality and timeliness of your input data. It provides a data-driven projection and a strong indicator of value, but it is not a guarantee. We recommend using it as a powerful guide alongside your own research and intuition, recognizing that real-world events (e.g., unexpected injuries, role changes) can always shift outcomes."
+    },
+    {
+      "q": "Which factors have the most significant impact on a player's projected value?",
+      "a": "Based on our model, the most impactful factors are typically a player's recent average points (reflecting current form), their injury impact factor (which can drastically reduce output), and the strength of their upcoming opponent. While historical averages provide a baseline, these immediate situational factors often dictate short-term performance and thus, immediate market value."
+    },
+    {
+      "q": "Can I use this tool for all fantasy sports leagues?",
+      "a": "This predictor is most effective for fantasy sports leagues where player performance is quantifiable into points (e.g., fantasy football, basketball, hockey, baseball hitter stats). The principles of analyzing recent trends, injuries, and matchups are universal, but the specific input units (like 'points') are tailored. Users should adapt their input interpretation to their specific league's scoring system if it varies significantly."
+    },
+    {
+      "q": "How often should I re-evaluate a player's value using this predictor?",
+      "a": "During the active season, we recommend re-evaluating player values weekly, especially before waiver wire claims, setting lineups, or considering trade offers. Player roles, injury statuses, and opponent matchups change constantly, making regular updates crucial. Pre-draft, it's invaluable for comparing prospects and adjusting to breaking news."
+    },
+    {
+      "q": "What if a player has very limited or no recent game data?",
+      "a": "If a player has no recent game data (e.g., newly drafted rookie, returning from long-term injury), the tool will lean more heavily on their historical average points. If both are zero, it will default to a conservative baseline. In such cases, the 'expected role multiplier' and 'age factor' become particularly critical inputs, and external research (e.g., training camp reports, coach comments) is highly recommended to inform your manual inputs for these players."
+    },
+    {
+      "q": "Does the predictor account for positional scarcity in my league?",
+      "a": "The predictor focuses on a player's individual performance projection and market value relative to their ADP. It does not directly account for positional scarcity, which is a strategic layer specific to your league's composition and scoring rules. You should use the individual player values generated by this tool in conjunction with your understanding of positional scarcity to make optimal draft and trade decisions (e.g., targeting a high-value tight end if the position is shallow)."
+    },
+    {
+      "q": "How should I interpret the 'Market Value Score' and 'Draft Recommendation'?",
+      "a": "The 'Market Value Score' ranges from 0 to 200, with 100 generally representing 'fair value' – a player whose projected performance aligns with their current market perception (ADP). Scores above 100 indicate increasing levels of 'value' (i.e., you're getting more production than the market expects for their price), while scores below 100 suggest they might be 'overvalued' or 'risky.' The 'Draft Recommendation' categorizes this score into actionable advice, from 'Elite Value Pick' to 'Risky Pick / Avoid'."
+    }
+  ],
+  "tags": [
+    "fantasy sports",
+    "player analysis",
+    "sports analytics",
+    "draft prep",
+    "trade strategy",
+    "projected points",
+    "market value",
+    "fantasy football",
+    "fantasy basketball",
+    "fantasy baseball"
+  ],
+  "related": [
+    "dfs-lineup-optimizer",
+    "injury-impact-calculator",
+    "strength-of-schedule-analyzer"
+  ],
+  "article": [
+    {
+      "heading": "The Importance of Fantasy Sports Player Value Predictor in Modern Context",
+      "body": "Fantasy sports have evolved dramatically from casual pastimes into highly competitive, data-driven endeavors. What once relied heavily on gut feelings, fan loyalty, and rudimentary statistics now demands a sophisticated approach, fueled by a constant stream of player statistics, game recaps, and advanced analytics. In this landscape, the Fantasy Sports Player Value Predictor emerges not merely as a convenience, but as an indispensable tool for gaining a significant competitive edge.\n\nThe genesis of fantasy sports dates back decades, but its mainstream explosion, particularly with the advent of the internet and daily fantasy sports (DFS), has transformed the way millions engage with professional sports. This intensified participation has simultaneously raised the stakes and the complexity of managing a winning team. No longer is it sufficient to simply draft your favorite players or pick up whoever had a 'good game' last week. The margin between victory and defeat often hinges on granular insights and the ability to project future performance with a higher degree of accuracy than your league mates.\n\nTraditional fantasy management often falls prey to recency bias or emotional attachments. A player has one breakout game, and managers scramble to acquire them, often overpaying. Conversely, a star player has a couple of down weeks, and panic sets in, leading to rash trades or drops. The Player Value Predictor counteracts these human tendencies by providing an objective, algorithmic assessment. It balances immediate performance fluctuations with long-term trends, mitigating the emotional rollercoaster that can derail a fantasy season.\n\nBeyond just predicting points, this tool delves into the crucial concept of 'market value.' In fantasy sports, value is not just about raw production; it's about production relative to cost or opportunity. A player scoring 15 points per game might be a fantastic value if you drafted them in the 8th round, but an overpay if you spent a 2nd-round pick. Our predictor helps identify those hidden gems and flag potential busts, enabling managers to make shrewd draft day decisions, negotiate advantageous trades, and effectively work the waiver wire.\n\nFurthermore, the modern sports landscape is fraught with variables: injuries are rampant, player roles shift, and team strategies evolve. A tool that can dynamically adjust for a player's current health status, anticipate changes in their usage, and factor in the strength of their upcoming opponent provides a multi-dimensional perspective that a static ranking cannot. This predictive capability allows managers to preemptively identify players poised for a surge or a slump, securing a tangible advantage in a world where information is king.\n\nIn essence, the Fantasy Sports Player Value Predictor is designed to be your analytical co-pilot. It empowers fantasy sports enthusiasts to move beyond guesswork, injecting a robust, data-driven methodology into their strategic planning. For anyone serious about conquering their league, understanding and leveraging such advanced analytics is no longer optional – it's fundamental."
+    },
+    {
+      "heading": "In-Depth Technical Guide: How the Calculation Works",
+      "body": "The Fantasy Sports Player Value Predictor employs a sophisticated, multi-stage algorithm to derive its projected points and market value score. This section breaks down the core logic and the interplay of each input parameter.\n\n**1. Establishing the Base Performance:**\nThe initial step involves calculating a base projected points value. This is a weighted average of two key performance indicators: the 'Recent Average Points' and the 'Historical Career/Season Average Points.' The weighting mechanism is dynamic; the 'Number of Recent Games Included in Average' input dictates how much emphasis is placed on recent form versus the player's longer-term track record. If a player has played more recent games (up to a capped number, e.g., 8), their recent performance carries greater weight, reflecting current hot streaks or slumps. Conversely, for players with limited recent data, the historical average provides a more stable baseline. If both inputs are zero, a nominal low base is used to prevent errors and signify extreme uncertainty.\n\n**2. Adjusting for Injury Status:**\nOnce the base performance is established, the calculation immediately factors in the 'Current Injury Impact Factor.' This input, ranging from 0 (fully healthy) to 1 (severely impacted, potentially out for extended time), directly scales down the projected points. A factor of 0.1, for instance, would reduce the base points by 10%, reflecting a minor but noticeable impact on performance. This step is crucial for realistic short-term projections, as even minor injuries can degrade efficiency.\n\n**3. Accounting for Opponent Strength:**\nThe 'Opponent's Defensive Rank' is then introduced as a critical modifier. Fantasy points are not scored in a vacuum; the quality of the opposing defense significantly influences a player's potential output. We normalize this rank (1-32, where 1 is best defense) around an average (rank 16). A tougher opponent (lower rank) will apply a negative adjustment, while an easier opponent (higher rank) will apply a positive one. The model incorporates a potential swing of up to +/- 15% to reflect the significant impact an extreme matchup can have on player performance.\n\n**4. Incorporating Role and Volume Changes:**\nThe 'Expected Role/Volume Multiplier' allows for dynamic adjustments based on anticipated changes in a player's usage. This input is a direct scalar: a multiplier of 1.2, for example, would boost the player's projected points by 20%, anticipating increased targets, carries, or playtime. This is particularly valuable for players whose situations change due to trades, depth chart shifts, or coaching philosophy adjustments, providing foresight beyond raw numbers.\n\n**5. Age-Related Performance Adjustments:**\nFinally, the 'Player Age Impact Factor' accounts for the natural progression or decline associated with a player's career stage. A factor of 1.1 might be applied to a young player entering their prime, indicating a potential for growth beyond their current averages. Conversely, an aging veteran might receive a 0.9 factor, acknowledging potential decline in explosiveness or durability. This subtle but important adjustment adds a layer of long-term strategic insight to the short-term projection.\n\n**6. Calculating the Market Value Score:**\nAfter determining the 'Projected Fantasy Points' (which are capped at a realistic maximum to prevent outliers), the algorithm proceeds to calculate the 'Predicted Market Value Score.' This score is a weighted composite, comparing the player's projected performance against their 'Current Average Draft Position (ADP)' or market rank. The core idea is that a player who is projected to score significantly more points than their ADP suggests (i.e., they are drafted later than their talent dictates) will have a higher market value score. The projected points carry a higher weight (70%) in this score, as on-field performance is ultimately paramount, while ADP contributes 30% as a measure of market perception. The resulting score is normalized to a 0-200 scale, with 100 representing a 'fair value' baseline.\n\nThis multi-faceted approach ensures that the predictor offers a comprehensive, flexible, and robust analysis, moving beyond simple statistical averages to capture the dynamic essence of fantasy sports."
+    },
+    {
+      "heading": "Real-World Application Scenarios",
+      "body": "The Fantasy Sports Player Value Predictor is designed to be an actionable tool for a variety of critical fantasy sports decisions. Here are a few real-world scenarios illustrating its practical utility:\n\n**Scenario 1: Draft Day Decision-Making - Breaking a Tie**\nImagine you're on the clock in your fantasy football draft, and you're torn between two running backs: Player A, a proven veteran who's been consistent but recently had a minor hamstring scare, and Player B, a younger player with high upside who just joined a new team with a potentially increased workload. Both have similar historical average points, making the choice difficult.\n\n*   **How the Tool Helps:** You input Player A's historical average, a slight 'injury impact factor' (e.g., 0.1) due to the hamstring, and their stable 'expected role multiplier' (1.0). For Player B, you input their historical average, a 'age factor' (e.g., 1.1) for upside, and a higher 'expected role multiplier' (e.g., 1.2) reflecting the new opportunity. You also input their respective opponent defensive ranks for Week 1. The tool calculates Player A's projected points slightly lower due to injury, but with a solid baseline. Player B's projected points might be higher due to the role increase and upside, even if their recent average isn't fully established. More importantly, the 'Market Value Score' might reveal Player B as an 'Elite Value Pick' if their ADP is still relatively low, indicating a higher return on investment. This data-driven comparison helps you confidently select Player B, capitalizing on their emerging situation.\n\n**Scenario 2: Evaluating a Trade Offer - Uncovering Hidden Value**\nYou receive a trade offer: your current Wide Receiver X for another manager's Wide Receiver Y. On paper, both players have put up similar fantasy points through the first few weeks of the season, making it seem like a lateral move. However, you suspect there's more to it.\n\n*   **How the Tool Helps:** You input the current stats for WR X: their recent average, healthy injury factor, and their next opponent's rank. Then, you input WR Y's stats. Critically, you realize WR Y has been playing against a string of top-tier defenses, reflected in a low 'opponent defensive rank' input. Furthermore, WR Y's team just lost their primary target to injury, suggesting a higher 'expected role multiplier' (e.g., 1.3) for WR Y moving forward. The predictor might show that despite similar past performance, WR Y has a significantly higher 'projected points' total for upcoming weeks due to an easier schedule and an increased role. Their 'Market Value Score' could also indicate they are an 'Elite Value Pick' compared to their current ADP. This insight allows you to accept the trade, knowing you're acquiring a player on the verge of a breakout, rather than just making a 'fair' swap.\n\n**Scenario 3: Waiver Wire Acquisition - Spotting a High-Upside Stash**\nIt's mid-season, and you're scouring the waiver wire for potential hidden gems. You notice a rookie running back who has been sparingly used but had one surprising, albeit fluky, touchdown in his last game. No one else in your league seems to be paying attention.\n\n*   **How the Tool Helps:** You input the rookie's minimal 'recent average points' (which might be low), a low 'recent game count', and their 'historical average points' from college if available (or a low baseline). The key here is to manually adjust the 'expected role multiplier.' You've read news that the starter ahead of him is nursing a nagging injury and the coach wants to give the rookie more opportunities. You set the 'expected role multiplier' to 1.3 or 1.4. You also factor in their youth with a 'age factor' of 1.1. The tool might then project surprisingly strong 'projected points' for the upcoming weeks, and crucially, an 'Elite Value Pick' 'Market Value Score' given their un-drafted status (high ADP). This empowers you to confidently pick up a player who could explode onto the scene before your league mates catch on, securing a valuable asset for free."
+    },
+    {
+      "heading": "Advanced Considerations and Potential Pitfalls",
+      "body": "While the Fantasy Sports Player Value Predictor offers a robust analytical framework, astute fantasy managers must also be aware of its inherent limitations and advanced considerations to leverage it most effectively.\n\n**1. The 'Garbage In, Garbage Out' Principle:**\nThe accuracy of any predictive model is intrinsically linked to the quality and relevance of its inputs. If you enter outdated, biased, or incorrect data, the outputs will be flawed. For example, using 'recent average points' from games played months ago, or inaccurately assessing an injury's severity, will lead to skewed projections. Always strive to use the most current, objective data available for each input field.\n\n**2. Qualitative Factors and Nuance:**\nThe tool is quantitative by nature, meaning it excels at processing numerical data. However, fantasy sports are also influenced by qualitative factors that are difficult to digitize. These can include team chemistry, locker room dynamics, specific coaching philosophies not reflected in standard 'role' adjustments, or even a player's mental state. A player might be in a contract year (a potential motivator) or experiencing personal issues (a potential detractor) – these nuances are beyond the scope of direct input and require external qualitative research from the user.\n\n**3. Dynamic Nature of Sports and Predictive Horizons:**\nProfessional sports environments are incredibly dynamic. Depth charts can change overnight, surprise injuries can occur mid-week, and team strategies evolve. While our predictor incorporates recent performance and expected role changes, it operates as a snapshot in time. A prediction made on Monday might need adjustment by Thursday if significant news breaks. Managers should view the tool's outputs as highly valuable, but constantly evolving, requiring regular updates and vigilance.\n\n**4. Over-Reliance and the 'Human Element':**\nAn advanced tool like this is a powerful asset, but it should not replace critical thinking and the 'human element' of fantasy sports. Blindly following any projection, even a sophisticated one, can lead to missed opportunities or poor decisions. Use the predictor to inform your decisions, challenge your biases, and provide a strong data-backed opinion, but always overlay it with your own game knowledge, league specific context (e.g., unique scoring rules, league tendencies), and gut instincts. The best fantasy managers combine robust analytics with strategic acumen.\n\n**5. Positional Scarcity and Opportunity Cost:**\nWhile the predictor excels at evaluating individual player value, it doesn't directly account for positional scarcity within your specific league. For example, the tool might identify an 'Elite Value Pick' at running back, but if your league is incredibly deep at RB and exceptionally thin at Tight End, the opportunity cost of drafting that running back might be higher than taking a slightly lower-value TE. Managers must integrate the tool's output with their broader draft strategy and understanding of the supply and demand dynamics across different positions in their unique fantasy ecosystem.\n\n**6. Data Source Consistency:**\nEnsure that your 'recent average points' and 'historical average points' come from consistent scoring systems (e.g., half-PPR, full-PPR) that match your league's rules. Mixing and matching different scoring types will distort the baseline performance and lead to inaccurate projections. Be mindful of where you source your statistical inputs to maintain integrity."
+    }
+  ]
+}
