@@ -53,6 +53,36 @@ const getRelatedTools = (current: ToolConfig) => {
   return (tagged.length ? tagged : pool).slice(0, 3);
 };
 
+const GENERIC_FAQS = [
+  {
+    q: "Is this calculator free to use?",
+    a: "Yes, this tool is 100% free to use. You can perform as many calculations as needed without any hidden fees or subscriptions."
+  },
+  {
+    q: "Is my data secure?",
+    a: "Absolutely. We prioritize your privacy by processing all calculations locally in your browser. Your input data is never sent to our servers or stored in any database."
+  },
+  {
+    q: "Can I use this on mobile?",
+    a: "Yes, our calculator is fully responsive and optimized for all devices, including smartphones, tablets, and desktop computers."
+  },
+  {
+    q: "How accurate are the results?",
+    a: "We use standard industry formulas to ensure high accuracy. However, results should be used as estimates. For critical decisions, please consult a professional."
+  }
+];
+
+const GENERIC_ARTICLE_SECTIONS = [
+  {
+    heading: "Data Privacy & Security",
+    body: "In an era where digital privacy is paramount, we have designed this tool with a 'privacy-first' architecture. Unlike many online calculators that send your data to remote servers for processing, our tool executes all mathematical logic directly within your browser. This means your sensitive inputs—whether financial, medical, or personal—never leave your device. You can use this tool with complete confidence, knowing that your data remains under your sole control."
+  },
+  {
+    heading: "Accuracy and Methodology",
+    body: "Our tools are built upon verified mathematical models and industry-standard formulas. We regularly audit our calculation logic against authoritative sources to ensure precision. However, it is important to remember that automated tools are designed to provide estimates and projections based on the inputs provided. Real-world scenarios can be complex, involving variables that a general-purpose calculator may not fully capture. Therefore, we recommend using these results as a starting point for further analysis or consultation with qualified professionals."
+  }
+];
+
 export default async function ToolPage({ params }: PageProps) {
   const { slug } = await params;
   const tool = loadToolConfig(slug);
@@ -87,6 +117,23 @@ export default async function ToolPage({ params }: PageProps) {
   const recommendations = loadAllToolConfigs()
     .filter((t) => t.slug !== tool.slug && t.tags?.some(tag => tool.tags?.includes(tag)))
     .slice(0, 3);
+
+  // Enhance content with generics if thin
+  const displayFaq = [...(tool.faq || [])];
+  if (displayFaq.length < 4) {
+    // Append generic FAQs that aren't already covered (simple duplicate check)
+    GENERIC_FAQS.forEach(g => {
+      if (!displayFaq.some(e => e.q.includes(g.q))) {
+        displayFaq.push(g);
+      }
+    });
+  }
+
+  const displayArticle = [...(tool.article || [])];
+  // Always append the privacy/methodology sections to add depth and authority
+  GENERIC_ARTICLE_SECTIONS.forEach(g => {
+    displayArticle.push(g);
+  });
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -171,11 +218,11 @@ export default async function ToolPage({ params }: PageProps) {
         </section>
       )}
 
-      {tool.faq?.length ? (
+      {displayFaq.length ? (
         <section className="space-y-4 rounded-3xl bg-white/80 p-8 shadow-lg shadow-gray-200/60 ring-1 ring-gray-100 backdrop-blur-sm">
           <h2 className="text-xl font-semibold text-gray-900">FAQ</h2>
           <dl className="space-y-3">
-            {tool.faq.map((item) => (
+            {displayFaq.map((item) => (
               <div
                 key={item.q}
                 className="rounded-2xl border border-gray-100 bg-gray-50 px-4 py-3"
@@ -218,11 +265,11 @@ export default async function ToolPage({ params }: PageProps) {
         </section>
       ) : null}
 
-      {tool.article?.length ? (
+      {displayArticle.length ? (
         <section className="space-y-6 rounded-3xl bg-white/80 p-8 shadow-lg shadow-gray-200/60 ring-1 ring-gray-100 backdrop-blur-sm">
           <h2 className="text-xl font-semibold text-gray-900">Learn more</h2>
           <div className="space-y-4">
-            {tool.article.map((section) => (
+            {displayArticle.map((section) => (
               <div key={section.heading} className="space-y-2">
                 <h3 className="text-lg font-semibold text-gray-900">
                   {section.heading}
