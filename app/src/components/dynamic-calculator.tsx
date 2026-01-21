@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useEffect } from "react";
 import { InputField, OutputField, ToolConfig, ToolResult } from "@/lib/types";
+import { ResultChart } from "./charts/result-chart";
 
 type Props = {
   config: ToolConfig;
@@ -168,24 +169,30 @@ export function DynamicCalculator({ config }: Props) {
           )}
         </div>
         {result ? (
-          <dl className="mt-4 grid gap-3 md:grid-cols-2">
-            {config.outputs.map((output) => (
-              <div
-                key={output.id}
-                className="rounded-2xl border border-gray-100 bg-gray-50 px-4 py-3"
-              >
-                <dt className="text-sm text-gray-600">{output.label}</dt>
-                <dd className="text-xl font-semibold text-gray-900">
-                  {formatValue(result[output.id], output)}{" "}
-                  {output.unit ? (
-                    <span className="text-sm font-normal text-gray-600">
-                      {output.unit}
-                    </span>
-                  ) : null}
-                </dd>
-              </div>
-            ))}
-          </dl>
+          <>
+            <dl className="mt-4 grid gap-3 md:grid-cols-2">
+              {config.outputs.map((output) => (
+                <div
+                  key={output.id}
+                  className="rounded-2xl border border-gray-100 bg-gray-50 px-4 py-3"
+                >
+                  <dt className="text-sm text-gray-600">{output.label}</dt>
+                  <dd className="text-xl font-semibold text-gray-900">
+                    {formatValue(result[output.id], output)}{" "}
+                    {output.unit ? (
+                      <span className="text-sm font-normal text-gray-600">
+                        {output.unit}
+                      </span>
+                    ) : null}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+
+            {config.chart && (
+              <ResultChart config={config.chart} results={result} />
+            )}
+          </>
         ) : (
           <p className="mt-2 text-sm text-gray-600">
             Enter your inputs and run the calculation to see results.

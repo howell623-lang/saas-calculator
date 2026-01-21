@@ -5,6 +5,7 @@ import { loadAllToolConfigs } from "@/lib/tool-loader";
 import { ToolsDirectory } from "@/components/tools-directory";
 import { INSIGHTS } from "./insights/page";
 import { FavoritesManager } from "@/components/favorites-manager";
+import { QuickJumpGlossary } from "@/components/quick-jump-glossary";
 
 export default function Home() {
   const tools = loadAllToolConfigs();
@@ -99,6 +100,8 @@ export default function Home() {
 
       <ToolsDirectory tools={tools} />
 
+      <QuickJumpGlossary tools={tools} />
+
       <section className="space-y-6" id="categories">
         <h2 className="text-2xl font-bold text-gray-900">Explore by Category</h2>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -166,7 +169,7 @@ export default function Home() {
           <p className="text-lg leading-8 text-gray-700">
             Welcome to CalcPanda, your premier destination for precise and reliable calculation tools. In an era where data drives decisions, we provide a streamlined, high-performance platform that transforms complex formulas into instant answers. Our "Micro-SaaS Factory" approach ensures that whether you are a financial analyst, a health enthusiast, or an engineer, you have access to specialized tools designed with accuracy and user experience in mind.
           </p>
-          
+
           <div className="mt-8 grid gap-8 md:grid-cols-2">
             <div>
               <h3 className="text-xl font-semibold text-gray-900">Why Accuracy Matters</h3>

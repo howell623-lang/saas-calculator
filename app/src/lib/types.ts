@@ -29,6 +29,16 @@ export type ArticleSection = {
   body: string;
 };
 
+export type ChartConfig = {
+  type: "pie" | "bar";
+  title?: string;
+  data: {
+    key: string; // The output ID from ToolResult
+    label: string;
+    color: string;
+  }[];
+};
+
 export type ToolConfig = {
   slug: string;
   title: string;
@@ -43,6 +53,7 @@ export type ToolConfig = {
   related?: string[];
   article?: ArticleSection[];
   calculationSteps?: string[];
+  chart?: ChartConfig;
 };
 
 export type ToolResult = Record<string, number | string>;

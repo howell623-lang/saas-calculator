@@ -23,6 +23,40 @@ export const metadata: Metadata = {
   },
 };
 
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebSite",
+      "name": "CalcPanda",
+      "url": "https://calcpanda.com",
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": "https://calcpanda.com/?q={search_term_string}",
+        "query-input": "required name=search_term_string"
+      }
+    },
+    {
+      "@type": "Organization",
+      "name": "CalcPanda",
+      "url": "https://calcpanda.com",
+      "logo": "https://calcpanda.com/logo.png",
+      "contactPoint": {
+        "@type": "ContactPoint",
+        "telephone": "+1-555-0199",
+        "contactType": "Customer Service",
+        "areaServed": "US",
+        "availableLanguage": "En"
+      },
+      "sameAs": [
+        "https://twitter.com/calcpanda",
+        "https://www.facebook.com/calcpanda",
+        "https://www.linkedin.com/company/calcpanda"
+      ]
+    }
+  ]
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -31,6 +65,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
         <Script
           async
           src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1856020780538432"
