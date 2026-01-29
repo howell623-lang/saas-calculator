@@ -94,6 +94,29 @@ export default function Home() {
         </div>
       </section>
 
+      {/* More Insights Grid */}
+      <section className="grid gap-6 md:grid-cols-2">
+        {INSIGHTS.slice(1, 3).map((article) => (
+          <div key={article.slug} className="group relative overflow-hidden rounded-3xl bg-white p-6 shadow-md transition hover:-translate-y-1 hover:shadow-xl ring-1 ring-gray-100">
+            <div className="flex items-center gap-2 mb-3">
+              <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-bold text-blue-600 uppercase tracking-wider">
+                {article.category}
+              </span>
+              <span className="text-xs text-gray-400">{article.date}</span>
+            </div>
+            <h3 className="mb-2 text-xl font-bold text-gray-900 group-hover:text-blue-600 transition">
+              <Link href={`/insights/${article.slug}`}>
+                <span className="absolute inset-0" />
+                {article.title}
+              </Link>
+            </h3>
+            <p className="text-sm text-gray-600 line-clamp-2">
+              {article.summary}
+            </p>
+          </div>
+        ))}
+      </section>
+
       <AdSlot slotName="home-top" note="Sponsored" />
 
       <FavoritesManager tools={tools} />
@@ -163,6 +186,21 @@ export default function Home() {
         ))}
       </section>
 
+
+
+      {/* Did You Know Section */}
+      <section className="rounded-3xl bg-blue-600 p-8 text-white shadow-lg md:p-10">
+        <div className="flex flex-col gap-6 md:flex-row md:items-center">
+          <div className="text-6xl">💡</div>
+          <div className="space-y-2">
+            <h2 className="text-2xl font-bold">Did you know?</h2>
+            <p className="text-lg text-blue-100 max-w-3xl">
+              Using a strict <strong>Debt Avalanche</strong> strategy (paying highest interest first) typically saves the average American household over <strong>$4,500</strong> in interest payments compared to random payments? Check out our <Link href="/loan-amortization-calculator" className="underline hover:text-white font-bold">Amortization Tool</Link> to simulate your savings.
+            </p>
+          </div>
+        </div>
+      </section>
+
       <section className="space-y-12 rounded-3xl bg-white/80 p-10 shadow-lg shadow-gray-200/60 ring-1 ring-gray-100 backdrop-blur-sm">
         <div className="prose prose-gray max-w-none">
           <h2 className="text-3xl font-bold text-gray-900">Professional Calculation Factory</h2>
@@ -195,7 +233,7 @@ export default function Home() {
           <Link href="/contact" className="hover:text-gray-900 transition">Contact Us</Link>
         </div>
       </section>
-    </div>
+    </div >
   );
 }
 // Trigger build at Mon Dec 29 10:22:51 CST 2025
