@@ -1,0 +1,191 @@
+{
+  "slug": "residential-solar-panel-system-payback-calc",
+  "title": "Residential Solar Panel System Payback Calculator",
+  "seo": {
+    "title": "Solar Panel Payback Period Calculator | Estimate Your ROI",
+    "description": "Calculate the payback period for your residential solar panel system. Estimate savings, factoring in system cost, incentives, electricity inflation, and feed-in tariffs to project your return on investment."
+  },
+  "inputs": [
+    {
+      "id": "system_cost",
+      "label": "Total System Cost (incl. installation)",
+      "type": "number",
+      "placeholder": "25000",
+      "required": true,
+      "step": 100
+    },
+    {
+      "id": "system_size_kw",
+      "label": "System Size (kW)",
+      "type": "number",
+      "placeholder": "8",
+      "required": true,
+      "step": 0.1
+    },
+    {
+      "id": "annual_production_kwh_per_kw",
+      "label": "Avg. Annual kWh Production per kW",
+      "type": "number",
+      "placeholder": "1300",
+      "required": true,
+      "step": 10
+    },
+    {
+      "id": "current_electricity_price",
+      "label": "Current Electricity Price ($/kWh)",
+      "type": "number",
+      "placeholder": "0.18",
+      "required": true,
+      "step": 0.001
+    },
+    {
+      "id": "electricity_inflation_rate",
+      "label": "Annual Electricity Price Inflation Rate (%)",
+      "type": "number",
+      "placeholder": "3",
+      "required": true,
+      "step": 0.1,
+      "min": 0
+    },
+    {
+      "id": "federal_tax_credit_percent",
+      "label": "Federal Tax Credit (ITC) (%)",
+      "type": "number",
+      "placeholder": "30",
+      "required": true,
+      "step": 0.1,
+      "min": 0,
+      "max": 100
+    },
+    {
+      "id": "state_local_incentive_amount",
+      "label": "State/Local Rebate/Incentive (One-time, $)",
+      "type": "number",
+      "placeholder": "1500",
+      "required": true,
+      "step": 10
+    },
+    {
+      "id": "annual_feed_in_tariff_kwh_price",
+      "label": "Feed-in Tariff Rate ($/kWh for excess)",
+      "type": "number",
+      "placeholder": "0.05",
+      "required": true,
+      "step": 0.001
+    },
+    {
+      "id": "average_annual_electricity_consumption_kwh",
+      "label": "Avg. Annual Household Consumption (kWh)",
+      "type": "number",
+      "placeholder": "10000",
+      "required": true,
+      "step": 10
+    },
+    {
+      "id": "system_degradation_rate",
+      "label": "Annual System Degradation Rate (%)",
+      "type": "number",
+      "placeholder": "0.5",
+      "required": true,
+      "step": 0.01,
+      "min": 0
+    }
+  ],
+  "outputs": [
+    {
+      "id": "payback_period_years",
+      "label": "Estimated Payback Period",
+      "unit": "years",
+      "precision": 1
+    },
+    {
+      "id": "total_savings_at_payback",
+      "label": "Total Net Benefits at Payback",
+      "unit": "$",
+      "precision": 0
+    },
+    {
+      "id": "annual_net_savings_year1",
+      "label": "Estimated Net Benefit in Year 1",
+      "unit": "$",
+      "precision": 0
+    },
+    {
+      "id": "roi_after_20_years",
+      "label": "Return on Investment After 20 Years",
+      "unit": "%",
+      "precision": 1
+    }
+  ],
+  "formula": "const systemCost = inputs.system_cost;\nconst systemSize = inputs.system_size_kw;\nconst annualProductionPerKw = inputs.annual_production_kwh_per_kw;\nlet currentElectricityPrice = inputs.current_electricity_price;\nconst electricityInflationRate = inputs.electricity_inflation_rate / 100;\nconst federalTaxCreditPercent = inputs.federal_tax_credit_percent / 100;\nconst stateLocalIncentive = inputs.state_local_incentive_amount;\nconst feedInTariffRate = inputs.annual_feed_in_tariff_kwh_price;\nconst avgAnnualConsumption = inputs.average_annual_electricity_consumption_kwh;\nconst degradationRate = inputs.system_degradation_rate / 100;\n\n// --- Step 1: Calculate Initial Net Cost --- Start\nlet netInitialCost = systemCost;\nconst federalTaxCreditAmount = Math.min(systemCost * federalTaxCreditPercent, systemCost);\nnetInitialCost -= federalTaxCreditAmount;\nnetInitialCost -= stateLocalIncentive;\n\n// Handle scenarios where incentives fully cover or exceed the system cost\nif (netInitialCost <= 0) {\n    const totalAnnualProductionYear1 = systemSize * annualProductionPerKw;\n    const effectiveElectricityPriceYear1 = currentElectricityPrice;\n    const selfConsumptionKwhYear1 = Math.min(totalAnnualProductionYear1, avgAnnualConsumption);\n    const excessProductionKwhYear1 = Math.max(0, totalAnnualProductionYear1 - avgAnnualConsumption);\n    const savingsFromSelfConsumptionYear1 = selfConsumptionKwhYear1 * effectiveElectricityPriceYear1;\n    const feedInTariffIncomeYear1 = excessProductionKwhYear1 * feedInTariffRate;\n    const annualBenefitYear1 = savingsFromSelfConsumptionYear1 + feedInTariffIncomeYear1;\n\n    let cumulativeBenefitsFor20YearsIfZeroCost = 0;\n    let currentAnnualProductionForROI = totalAnnualProductionYear1;\n    for (let i = 1; i <= 20; i++) {\n        const effectiveElectricityPrice = currentElectricityPrice * Math.pow(1 + electricityInflationRate, i - 1);\n        const selfConsumptionKwh = Math.min(currentAnnualProductionForROI, avgAnnualConsumption);\n        const excessProductionKwh = Math.max(0, currentAnnualProductionForROI - avgAnnualConsumption);\n        const savingsFromSelfConsumption = selfConsumptionKwh * effectiveElectricityPrice;\n        const feedInTariffIncome = excessProductionKwh * feedInTariffRate;\n        cumulativeBenefitsFor20YearsIfZeroCost += (savingsFromSelfConsumption + feedInTariffIncome);\n        currentAnnualProductionForROI *= (1 - degradationRate);\n    }\n    \n    return {\n        payback_period_years: 0,\n        total_savings_at_payback: systemCost - netInitialCost,\n        annual_net_savings_year1: annualBenefitYear1,\n        roi_after_20_years: 99999.0\n    };\n}\n// --- Step 1: Calculate Initial Net Cost --- End\n\n// --- Step 2: Calculate Annual Production for Year 1 --- Start\nconst totalAnnualProductionYear1 = systemSize * annualProductionPerKw;\n// --- Step 2: Calculate Annual Production for Year 1 --- End\n\n// --- Step 3: Iterate year by year to find payback --- Start\nlet cumulativeSavings = 0; \nlet paybackPeriodYears = 0;\nconst maxIterations = 50;\nlet currentAnnualProduction = totalAnnualProductionYear1;\nlet annualNetSavingsYear1 = 0; \nlet totalSavingsAtPayback = 0; \n\nfor (let year = 1; year <= maxIterations; year++) {\n    const effectiveElectricityPrice = currentElectricityPrice * Math.pow(1 + electricityInflationRate, year - 1);\n    const selfConsumptionKwh = Math.min(currentAnnualProduction, avgAnnualConsumption);\n    const excessProductionKwh = Math.max(0, currentAnnualProduction - avgAnnualConsumption);\n    const savingsFromSelfConsumption = selfConsumptionKwh * effectiveElectricityPrice;\n    const feedInTariffIncome = excessProductionKwh * feedInTariffRate;\n    const annualBenefit = savingsFromSelfConsumption + feedInTariffIncome;\n\n    cumulativeSavings += annualBenefit;\n\n    if (year === 1) {\n        annualNetSavingsYear1 = annualBenefit;\n    }\n\n    if (cumulativeSavings >= netInitialCost && paybackPeriodYears === 0) {\n        paybackPeriodYears = year;\n        totalSavingsAtPayback = cumulativeSavings;\n    }\n\n    currentAnnualProduction *= (1 - degradationRate);\n}\n\nif (paybackPeriodYears === 0) {\n    paybackPeriodYears = maxIterations;\n    totalSavingsAtPayback = 0;\n}\n// --- Step 3: Iterate year by year to find payback --- End\n\n// --- Step 4: Calculate ROI after 20 years --- Start\nlet cumulativeBenefits20Years = 0;\ncurrentAnnualProduction = totalAnnualProductionYear1;\nfor (let i = 1; i <= 20; i++) {\n    const effectiveElectricityPrice = currentElectricityPrice * Math.pow(1 + electricityInflationRate, i - 1);\n    const selfConsumptionKwh = Math.min(currentAnnualProduction, avgAnnualConsumption);\n    const excessProductionKwh = Math.max(0, currentAnnualProduction - avgAnnualConsumption);\n    const savingsFromSelfConsumption = selfConsumptionKwh * effectiveElectricityPrice;\n    const feedInTariffIncome = excessProductionKwh * feedInTariffRate;\n    cumulativeBenefits20Years += (savingsFromSelfConsumption + feedInTariffIncome);\n    currentAnnualProduction *= (1 - degradationRate);\n}\n\nlet roiAfter20Years = 0;\nif (netInitialCost > 0) {\n    roiAfter20Years = ((cumulativeBenefits20Years - netInitialCost) / netInitialCost) * 100;\n} else {\n    roiAfter20Years = 99999.0;\n}\n// --- Step 4: Calculate ROI after 20 years --- End\n\nreturn {\n    payback_period_years: parseFloat(paybackPeriodYears.toFixed(1)),\n    total_savings_at_payback: parseFloat(totalSavingsAtPayback.toFixed(0)),\n    annual_net_savings_year1: parseFloat(annualNetSavingsYear1.toFixed(0)),\n    roi_after_20_years: parseFloat(roiAfter20Years.toFixed(1))\n};",
+  "summary": "This calculator helps homeowners estimate the financial payback period for installing a residential solar panel system. By factoring in initial system costs, available tax credits and rebates, current electricity prices, inflation rates, and potential feed-in tariffs, it provides a clear projection of when your investment will pay for itself through energy savings and income generation.",
+  "cta": "Calculate Your Solar Payback",
+  "faq": [
+    {
+      "q": "What is the solar payback period?",
+      "a": "The solar payback period is the time it takes for the cumulative financial benefits (energy savings, tax incentives, feed-in tariffs) from your solar panel system to equal your net initial investment. Essentially, it's when your system has paid for itself."
+    },
+    {
+      "q": "How does the federal solar tax credit (ITC) affect my payback period?",
+      "a": "The federal Investment Tax Credit (ITC) significantly reduces your upfront net cost. By lowering the amount you initially pay out of pocket, it dramatically shortens the time it takes for your system to generate enough savings to cover that reduced cost, thus accelerating your payback period and improving your overall ROI."
+    },
+    {
+      "q": "What are feed-in tariffs and how do they benefit me?",
+      "a": "Feed-in tariffs (FITs) are payments made to homeowners for the excess electricity their solar panels generate and feed back into the grid. These tariffs provide an additional revenue stream, supplementing the savings from self-consumption and further reducing your payback period by adding to your system's annual monetary benefits."
+    },
+    {
+      "q": "Why is electricity price inflation rate an important factor?",
+      "a": "Electricity price inflation is crucial because the value of your solar savings increases over time as grid electricity prices rise. If you're avoiding purchasing electricity at an escalating rate, your annual savings grow, which can substantially shorten the payback period and increase long-term profitability."
+    },
+    {
+      "q": "How accurate is this calculator, and what are its limitations?",
+      "a": "This calculator provides a robust estimate based on the inputs you provide. Its accuracy depends heavily on the quality and realism of your data (e.g., local electricity rates, accurate production estimates, current incentives). It is a projection and does not account for unforeseen maintenance costs, potential changes in government policies, or varying weather patterns affecting production."
+    },
+    {
+      "q": "What is 'system degradation' and how does it impact my solar investment?",
+      "a": "System degradation refers to the natural, gradual decrease in solar panel efficiency over time. Most quality panels degrade by about 0.5% to 1% annually. This calculator accounts for this by slightly reducing the system's annual production year after year, providing a more realistic long-term financial projection."
+    },
+    {
+      "q": "Are there other financial benefits of solar not included in this calculation?",
+      "a": "Yes, beyond direct savings and income, solar panels can significantly increase your property value, offer energy independence from utility rate hikes, and contribute to environmental sustainability – benefits not directly monetized within the payback period calculation but valuable nonetheless."
+    },
+    {
+      "q": "What if my solar system produces more electricity than my household consumes?",
+      "a": "If your system produces more electricity than you use, the excess is typically fed back into the grid. Depending on your local regulations, you may receive compensation through net metering credits or feed-in tariffs (which this calculator includes). This excess generation can further reduce your bills or even generate income, improving your payback and ROI."
+    }
+  ],
+  "tags": [
+    "solar energy",
+    "renewable energy",
+    "home improvement",
+    "financial planning",
+    "energy investment",
+    "sustainability",
+    "clean energy",
+    "payback period",
+    "roi calculator"
+  ],
+  "related": [
+    "solar-sizing-calculator",
+    "energy-bill-savings-estimator",
+    "carbon-footprint-calculator"
+  ],
+  "article": [
+    {
+      "heading": "The Importance of Residential Solar Panel System Payback Calculator in Modern Context",
+      "body": "In an era defined by accelerating climate change concerns, volatile energy markets, and a growing consumer desire for sustainability, residential solar panel systems have transitioned from niche technology to mainstream necessity. However, for many homeowners, the upfront investment can seem daunting. This is precisely where a robust Residential Solar Panel System Payback Calculator becomes an indispensable tool. It transcends mere cost estimation, offering a critical lens through which prospective solar owners can understand the financial viability and long-term economic advantages of their investment.\n\nThe calculator empowers individuals by demystifying the complex financial landscape of renewable energy. Instead of relying on broad assumptions or aspirational narratives, it provides a data-driven projection of when the system will 'pay for itself.' This quantifiable metric, the payback period, is often the deciding factor for homeowners grappling with significant capital expenditure. It addresses the evergreen demand for understanding renewable energy investments, translating environmental aspirations into concrete financial returns.\n\nFurthermore, the importance of this tool is magnified by the dynamic nature of energy economics. Electricity prices are subject to inflation, geopolitical events, and regulatory shifts, making long-term budgeting challenging. A solar system, once installed, provides a degree of insulation from these external pressures. By incorporating projected electricity inflation rates, the calculator provides a more accurate picture of escalating savings over time, highlighting solar's role as a hedge against rising utility costs. This long-term financial security is a compelling draw for families, retirees, and forward-thinking investors alike.\n\nBeyond direct savings, the calculator implicitly underscores the societal value proposition. Every solar installation contributes to grid stabilization, reduces reliance on fossil fuels, and lowers carbon emissions. For homeowners, understanding their individual payback period allows them to confidently participate in this larger energy transition, knowing their personal financial interests are aligned with broader environmental goals. It transforms an abstract concept of 'going green' into a tangible, financially sound decision, fostering greater adoption of sustainable energy solutions across communities.\n\nFinally, the tool serves as a crucial component of holistic financial planning. A residential solar system is not just an energy upgrade; it’s a long-term asset that enhances property value and provides a predictable return on investment. By providing a clear payback timeline and projected ROI, the calculator enables homeowners to compare solar investment against other financial opportunities, ensuring they make informed decisions that align with their overall wealth management strategies. In essence, it converts a complex engineering project into a transparent, understandable financial journey, making renewable energy accessible to a wider audience."
+    },
+    {
+      "heading": "In-Depth Technical Guide: How the Calculation Works",
+      "body": "The Residential Solar Panel System Payback Calculator operates on a robust, multi-step financial model designed to simulate the cash flow generated by a solar investment over time. Its core objective is to determine the point at which cumulative benefits outweigh the initial net cost.\n\n**Step 1: Calculating the Net Initial Investment.** The first crucial step is to determine the actual out-of-pocket expense for the homeowner. This begins with the 'Total System Cost,' which encompasses the price of panels, inverters, racking, labor, and all associated installation fees. From this gross cost, we deduct available financial incentives. The most significant of these is typically the 'Federal Investment Tax Credit (ITC),' applied as a percentage of the total system cost. Additionally, any 'State/Local Rebates or Incentives,' which are usually one-time fixed or per-watt payments, are subtracted. The resulting figure is the 'Net Initial Cost,' representing the true capital outlay required from the homeowner. This is the financial hurdle the system's benefits must overcome.\n\n**Step 2: Determining Annual System Performance and Consumption.** Next, the calculator projects the system's energy output. This involves multiplying the 'System Size (kW)' by the 'Average Annual kWh Production per kW,' which accounts for regional sunlight availability and system efficiency. This gives us the 'Total Annual Production' for the first year. We also incorporate the 'Average Annual Household Consumption (kWh)' to determine how much of the generated electricity is self-consumed versus what is exported to the grid. This distinction is critical because self-consumed electricity offers savings at the full retail electricity price, while exported electricity often receives a lower 'Feed-in Tariff Rate.'\n\n**Step 3: Iterative Annual Benefit Calculation.** The heart of the calculator is an iterative loop that projects annual financial benefits over many years (e.g., up to 50 years to capture very long payback periods). In each year of this loop, several dynamic factors are applied:\n\n*   **Electricity Price Inflation:** The 'Annual Electricity Price Inflation Rate' is applied to the 'Current Electricity Price.' This means the value of avoided electricity purchases increases each year, accurately reflecting the escalating savings over time.\n*   **System Degradation:** Solar panels naturally become slightly less efficient over time. The 'Annual System Degradation Rate' (typically 0.5-1%) is applied to the system's production, reducing the total kWh generated in subsequent years. This ensures a realistic assessment of long-term energy output.\n*   **Annual Monetary Benefit:** For each year, the calculator determines two primary sources of benefit: 1) 'Savings from Self-Consumption,' calculated by multiplying the self-consumed kWh by the *inflated* electricity price for that year. 2) 'Income from Feed-in Tariffs,' calculated by multiplying the excess kWh exported to the grid by the fixed 'Feed-in Tariff Rate.' The sum of these two constitutes the 'Annual Monetary Benefit.'\n\n**Step 4: Cumulative Savings and Payback Determination.** The 'Annual Monetary Benefit' for each year is added to a running 'Cumulative Savings' total. The calculator continually checks if this 'Cumulative Savings' has met or exceeded the 'Net Initial Cost.' The first year this occurs is identified as the 'Payback Period.' If the cumulative savings do not reach the initial cost within the maximum iteration limit (e.g., 50 years), it indicates a very long or indefinite payback.\n\n**Step 5: Return on Investment (ROI) Calculation.** Finally, to provide a broader financial perspective beyond simple payback, the calculator projects the cumulative benefits over a standard investment horizon, such as 20 years. The 'ROI After 20 Years' is then calculated using the formula: `((Cumulative Benefits over 20 Years - Net Initial Cost) / Net Initial Cost) * 100`. This metric offers a percentage return on the investment, allowing for comparison with other financial instruments. Edge cases where the net initial cost is zero or negative (due to very generous incentives) are handled to provide sensible outputs, often indicating an effectively infinite or extremely high ROI."
+    },
+    {
+      "heading": "Real-World Application Scenarios",
+      "body": "The Residential Solar Panel System Payback Calculator is a versatile tool, applicable to a diverse range of homeowners with varying motivations and financial situations. Understanding these real-world scenarios highlights its practical utility.\n\n**Scenario 1: The Eco-Conscious Millennial Homeowner in a High-Electricity-Cost State.**\nMeet Sarah, a 32-year-old software engineer and first-time homeowner in California, a state known for both its high electricity rates and progressive solar incentives. Sarah is deeply committed to sustainability and wants to reduce her carbon footprint. However, she also has student loan debt and is mindful of her budget. Using the calculator, Sarah inputs her relatively high current electricity price ($0.28/kWh), the federal ITC (30%), and a specific state rebate program ($2,000). She estimates her household's annual consumption at 8,000 kWh and receives quotes for an appropriate 6 kW system. The calculator quickly reveals a payback period of 6-7 years, significantly shorter than she anticipated, coupled with an impressive ROI after 20 years. This concrete financial data gives Sarah the confidence to move forward, knowing her environmental values align with a smart financial decision, and the system will pay for itself well within her long-term financial planning horizon.\n\n**Scenario 2: The Budget-Minded Retiree Seeking Stable Expenses.**\nJohn and Mary, a retired couple in Florida, live on a fixed income and are increasingly concerned about rising utility bills. Their current electricity price is moderate ($0.15/kWh), but they've seen steady increases over the past decade. They're looking for ways to stabilize their monthly expenses and potentially generate a small, consistent income. They input their system cost, a modest state incentive, and critically, their local utility's feed-in tariff rate for excess power. Their average annual consumption is 12,000 kWh, and they're considering a 10 kW system to cover nearly all their needs. The calculator shows a payback period of around 9-10 years, which, while longer than Sarah's, is acceptable for their long-term residency. More importantly, the 'Annual Net Benefit in Year 1' and projected annual savings provide assurance that their monthly electricity bills will drastically decrease, offering valuable financial predictability and peace of mind on a fixed income, potentially freeing up funds for other retirement activities.\n\n**Scenario 3: The Investor-Savvy Property Owner Expanding Their Portfolio.**\nDavid owns several rental properties in Arizona and is always looking for ways to increase their market value and appeal to tenants, while also improving his overall investment returns. He understands that lower utility costs are a significant draw for renters. David uses the calculator to model the impact of installing solar on a new acquisition. He inputs the system costs, accounts for the federal ITC, and considers Arizona's strong solar irradiation for high annual production. His goal is not just a quick payback, but a high 'ROI After 20 Years' to maximize long-term asset appreciation and rental income potential. By comparing different system sizes and the resulting ROIs, David can strategically choose the most financially advantageous solar setup for each property, attracting tenants, potentially commanding higher rents, and boosting his overall real estate portfolio's profitability and sustainability credentials. The calculator helps him quantify the added value of solar as a tangible asset improvement."
+    },
+    {
+      "heading": "Advanced Considerations and Potential Pitfalls",
+      "body": "While the Residential Solar Panel System Payback Calculator provides a powerful financial projection, a truly expert evaluation requires consideration of factors beyond its direct scope. Understanding these advanced considerations and potential pitfalls is crucial for making the most informed decision.\n\n**Operations and Maintenance (O&M) Costs:** The calculator focuses on initial investment and energy benefits, but it doesn't typically factor in ongoing O&M costs. While solar panels are largely maintenance-free, issues like inverter replacement (every 10-15 years), occasional cleaning (especially in dusty areas), and monitoring system upkeep can add minor expenses. Factoring in a small annual O&M cost (e.g., $100-$300/year) into a more detailed personal financial model can provide an even more conservative and accurate payback period.\n\n**Battery Storage Integration:** The calculator assumes a direct grid-tied system. However, integrating battery storage significantly changes the economics. Batteries increase upfront costs but can boost self-consumption (reducing reliance on potentially low feed-in tariffs), provide blackout protection, and enable peak-shaving strategies (drawing from batteries when grid electricity is most expensive). While this calculator doesn't model battery ROI, it's a critical consideration for those seeking greater energy independence or living in areas with time-of-use rates.\n\n**Evolving Policy Landscape:** Solar incentives and regulations are not static. The federal ITC has a scheduled step-down (though often extended), and state/local programs can change, expire, or be introduced. Net metering policies, which dictate how utilities compensate for excess electricity, are particularly dynamic. Future changes to these policies could alter the long-term financial benefits. Homeowners should stay abreast of current and proposed legislation in their area.\n\n**Opportunity Cost of Capital:** Every investment carries an opportunity cost – the return you forego by choosing one investment over another. The initial capital invested in solar could otherwise be invested in stocks, bonds, or other ventures. While solar often provides a predictable, inflation-hedged return, it's illiquid. Comparing the solar ROI (as provided by the calculator) with potential returns from alternative investments can offer a more holistic financial perspective, especially for those with diverse investment portfolios.\n\n**Property Value Enhancement (Non-Monetized Benefit):** While increased property value is a widely recognized benefit of solar, it's challenging to quantify precisely and isn't included in simple payback calculations. Studies consistently show that homes with solar sell faster and for a premium. This 'hidden' return on investment can significantly outweigh minor discrepancies in projected energy savings or O&M costs, serving as a powerful financial advantage upon resale. However, its realization depends on market conditions and the perceived value of solar by future buyers.\n\n**System Sizing Optimization:** The most financially efficient solar system is not necessarily the largest one. Oversizing a system, especially in areas with low feed-in tariffs or poor net metering policies, can lead to diminishing returns. Optimizing system size to closely match household consumption maximizes self-consumption savings (at the higher retail rate) and minimizes reliance on less lucrative compensation for exported power. Expert installers will help with this, but understanding its importance is key."
+    }
+  ]
+}
