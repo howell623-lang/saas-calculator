@@ -85,8 +85,8 @@ const assertToolConfig = (value: unknown, slug: string): ToolConfig => {
     cta: isString(candidate.cta) ? candidate.cta : undefined,
     faq: Array.isArray(candidate.faq)
       ? (candidate.faq as { q?: unknown; a?: unknown }[])
-          .filter((item) => isString(item.q) && isString(item.a))
-          .map((item) => ({ q: item.q as string, a: item.a as string }))
+        .filter((item) => isString(item.q) && isString(item.a))
+        .map((item) => ({ q: item.q as string, a: item.a as string }))
       : undefined,
     tags: Array.isArray(candidate.tags)
       ? (candidate.tags as unknown[]).filter(isString)
@@ -117,6 +117,11 @@ export const loadToolConfig = (slug: string): ToolConfig | null => {
     const raw = fs.readFileSync(filePath, "utf-8");
     const data = JSON.parse(raw);
     const config = assertToolConfig(data, slug);
+
+    // Get file modification time
+    const stats = fs.statSync(filePath);
+    config.updatedAt = stats.mtime.toISOString();
+
     console.log(`[tool-loader] Loaded slug ${slug} from ${filePath}`);
     return config;
   } catch (err) {
@@ -129,3 +134,20 @@ export const loadAllToolConfigs = (): ToolConfig[] =>
   listToolSlugs()
     .map((slug) => loadToolConfig(slug))
     .filter((tool): tool is ToolConfig => Boolean(tool));
+
+export const MIN_ARTICLE_SECTIONS_FOR_INDEXING = 2;
+export const MIN_ARTICLE_BODY_LENGTH = 1000;
+
+export const isToolIndexable = (tool: ToolConfig): boolean => {
+  if (!tool.article || tool.article.length < MIN_ARTICLE_SECTIONS_FOR_INDEXING) return false;
+
+  const totalLength = tool.article.reduce((acc, section) => acc + (section.body?.length || 0), 0);
+  return totalLength >= MIN_ARTICLE_BODY_LENGTH;
+};
+
+export const listIndexableToolSlugs = (): string[] => {
+  return loadAllToolConfigs()
+    .filter(isToolIndexable)
+    .map((tool) => tool.slug);
+};
+

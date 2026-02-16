@@ -2,7 +2,7 @@ import { AdSlot } from "@/components/ad-slot";
 import { AdsToggle } from "@/components/ads-toggle";
 import { DynamicCalculator } from "@/components/dynamic-calculator";
 import { ToolInteractions } from "@/components/tool-interactions";
-import { loadAllToolConfigs, loadToolConfig, listToolSlugs } from "@/lib/tool-loader";
+import { loadAllToolConfigs, loadToolConfig, listToolSlugs, isToolIndexable } from "@/lib/tool-loader";
 import Script from "next/script";
 import { ToolConfig } from "@/lib/types";
 import { Metadata } from "next";
@@ -22,11 +22,22 @@ export async function generateMetadata(
   const { slug } = await params;
   const tool = loadToolConfig(slug);
   if (!tool) return;
+
+  const indexable = isToolIndexable(tool);
+
   return {
     title: tool.seo.title,
     description: tool.seo.description,
     alternates: {
       canonical: `/${tool.slug}`,
+    },
+    robots: {
+      index: indexable,
+      follow: true,
+      googleBot: {
+        index: indexable,
+        follow: true,
+      }
     },
     openGraph: {
       title: tool.seo.title,
@@ -72,16 +83,7 @@ const GENERIC_FAQS = [
   }
 ];
 
-const GENERIC_ARTICLE_SECTIONS = [
-  {
-    heading: "Data Privacy & Security",
-    body: "In an era where digital privacy is paramount, we have designed this tool with a 'privacy-first' architecture. Unlike many online calculators that send your data to remote servers for processing, our tool executes all mathematical logic directly within your browser. This means your sensitive inputs—whether financial, medical, or personal—never leave your device. You can use this tool with complete confidence, knowing that your data remains under your sole control."
-  },
-  {
-    heading: "Accuracy and Methodology",
-    body: "Our tools are built upon verified mathematical models and industry-standard formulas. We regularly audit our calculation logic against authoritative sources to ensure precision. However, it is important to remember that automated tools are designed to provide estimates and projections based on the inputs provided. Real-world scenarios can be complex, involving variables that a general-purpose calculator may not fully capture. Therefore, we recommend using these results as a starting point for further analysis or consultation with qualified professionals."
-  }
-];
+
 
 export default async function ToolPage({ params }: PageProps) {
   const { slug } = await params;
@@ -129,11 +131,7 @@ export default async function ToolPage({ params }: PageProps) {
     });
   }
 
-  const displayArticle = [...(tool.article || [])];
-  // Always append the privacy/methodology sections to add depth and authority
-  GENERIC_ARTICLE_SECTIONS.forEach(g => {
-    displayArticle.push(g);
-  });
+  const displayArticle = tool.article || [];
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -148,11 +146,31 @@ export default async function ToolPage({ params }: PageProps) {
       "priceCurrency": "USD"
     },
     "featureList": tool.summary,
+    "dateModified": tool.updatedAt,
     "aggregateRating": {
       "@type": "AggregateRating",
       "ratingValue": "4.9",
       "reviewCount": "128"
     }
+  };
+
+  const breadcrumbLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      {
+        "@type": "ListItem",
+        "position": 1,
+        "name": "Home",
+        "item": "https://calcpanda.com"
+      },
+      {
+        "@type": "ListItem",
+        "position": 2,
+        "name": tool.title,
+        "item": `https://calcpanda.com/${tool.slug}`
+      }
+    ]
   };
 
   return (
@@ -161,6 +179,11 @@ export default async function ToolPage({ params }: PageProps) {
         id="structured-data"
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      <Script
+        id="breadcrumb-data"
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }}
       />
       <Link
         href="/"
@@ -288,7 +311,7 @@ export default async function ToolPage({ params }: PageProps) {
                 <span>Fact-checked and reviewed by <strong>CalcPanda Editorial Team</strong></span>
               </div>
               <div className="text-xs text-gray-400">
-                Last updated: {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                Last updated: {tool.updatedAt ? new Date(tool.updatedAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
               </div>
             </div>
             <div className="mt-4 text-[10px] text-gray-400 leading-relaxed uppercase tracking-wider">

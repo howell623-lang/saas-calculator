@@ -222,6 +222,43 @@ export default function Home() {
               </p>
             </div>
           </div>
+
+          <div className="mt-12 rounded-2xl bg-gray-50 p-8 ring-1 ring-gray-200">
+            <h3 className="text-2xl font-bold text-gray-900 mb-4">The CalcPanda Standard</h3>
+            <p className="text-gray-700 mb-6">
+              We operate under a strict "Verification First" policy. Unlike content farms that auto-generate pages, our tools follow a manual review pipeline:
+            </p>
+            <ul className="grid gap-4 sm:grid-cols-2">
+              <li className="flex items-start gap-3">
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-green-100 text-green-700 font-bold text-xs">1</span>
+                <div>
+                  <h4 className="font-bold text-gray-900">Source Verification</h4>
+                  <p className="text-sm text-gray-600">Formulas are sourced directly from government (IRS, WHO) or academic documentation.</p>
+                </div>
+              </li>
+              <li className="flex items-start gap-3">
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-green-100 text-green-700 font-bold text-xs">2</span>
+                <div>
+                  <h4 className="font-bold text-gray-900">Code Audit</h4>
+                  <p className="text-sm text-gray-600">Logic is unit-tested against known datasets to ensure computational parity.</p>
+                </div>
+              </li>
+              <li className="flex items-start gap-3">
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-green-100 text-green-700 font-bold text-xs">3</span>
+                <div>
+                  <h4 className="font-bold text-gray-900">Expert Review</h4>
+                  <p className="text-sm text-gray-600">Explanations are reviewed by domain experts to ensure context is accurate.</p>
+                </div>
+              </li>
+              <li className="flex items-start gap-3">
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-green-100 text-green-700 font-bold text-xs">4</span>
+                <div>
+                  <h4 className="font-bold text-gray-900">Regular Specificity</h4>
+                  <p className="text-sm text-gray-600">We update tools annually to reflect changing tax laws, health guidelines, and economic conditions.</p>
+                </div>
+              </li>
+            </ul>
+          </div>
         </div>
 
         <div className="flex flex-wrap justify-center gap-8 border-t border-gray-100 pt-10 text-sm font-medium text-gray-500">
