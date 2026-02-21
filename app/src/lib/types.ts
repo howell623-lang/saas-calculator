@@ -1,10 +1,11 @@
 export type InputField = {
   id: string;
   label: string;
-  type: "number" | "text";
+  type: "number" | "text" | "select";
   placeholder?: string;
   required?: boolean;
   step?: number;
+  options?: string[];
 };
 
 export type OutputField = {
@@ -54,6 +55,7 @@ export type ToolConfig = {
   article?: ArticleSection[];
   calculationSteps?: string[];
   chart?: ChartConfig;
+  updatedAt?: string;
 };
 
 export type ToolResult = Record<string, number | string>;

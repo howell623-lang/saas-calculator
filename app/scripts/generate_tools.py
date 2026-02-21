@@ -443,16 +443,17 @@ Constraints for "High Value Content":
 - inputs: 4-10 professional inputs. Use realistic domain units and granular steps.
 - formula: Must be a robust, multi-step calculation. Include edge case handling, caps, and logical branches.
 - calculationSteps: 3-6 clear, numbered steps explaining how the inputs become the outputs.
-- article: At least 1000 words of high-quality, original-sounding content. Avoid generic filler.
-  Sections required:
-  1) "The Importance of {topic} in Modern Context" (Deep dive into the 'why')
-  2) "In-Depth Technical Guide: How the Calculation Works" (Explain the math/logic clearly)
-  3) "Real-World Application Scenarios" (Describe 2-3 detailed personas or situations where this tool is used)
-  4) "Advanced Considerations and Potential Pitfalls" (Professional advice on limitations)
-- FAQ: 8 unique, high-quality questions and answers that address user intent.
-- Slug: URL-safe, lowercase.
+- article: MUST be an in-depth, authoritative guide (minimum 1500 words).
+  Structure:
+  1) "Introduction & The 'Why'": Detailed context, statistics, and why this calculation matters.
+  2) "The Math Under the Hood": Explain the formula variables, the logic, and the scientific/financial principles used.
+  3) "Step-by-Step Guide": How to use the tool effectively.
+  4) "Case Studies": Two detailed, realistic scenarios with specific numbers (e.g., "John's Mortgage", "Sarah's Calorie Deficit").
+  5) "Expert Tips & Pitfalls": nuance, edge cases, and professional advice.
+- FAQ: 8-10 distinct questions.
+- Tone: Professional, verifiable, objective (like Investopedia or Mayo Clinic).
 
-Respond with JSON only, ensuring the content feels written by an expert in the field."""
+Respond with JSON only, ensuring the content is substantial and high-value."""
     model = genai.GenerativeModel(MODEL_NAME)
     try:
         response = model.generate_content(prompt, request_options={"timeout": 120})
@@ -502,21 +503,28 @@ def validate_and_fix(data: Dict[str, Any], slug: str) -> ToolConfig:
         article = []
     if len(article) < 3:
         why = (
-            f"{data['title']} saves time versus manual spreadsheets, applying domain guardrails and unit handling. "
-            f"Use it for quick what-if scenarios and to communicate assumptions."
+            f"{data['title']} is an essential tool for accurate planning and analysis. "
+            f"By standardizing the inputs and applying verified formulas, this calculator eliminates human error "
+            f"and provides instant, reliable results for users in {data.get('category', 'general')} fields. "
+            f"Whether you are a professional or a student, understanding these metrics is the first step toward better decision-making."
         )
         how = (
-            "We normalize inputs, convert units, apply ratios, conditionals, caps, and safety factors, "
-            "then return primary and helper outputs so you can sanity-check results."
+            "Our engine processes your inputs through a multi-stage validation logic. "
+            "First, we normalize all units to standard scientific or financial baselines. "
+            "Then, we apply the core domain-specific formula (see the 'Formula' section above for the raw math). "
+            "Finally, we calculate secondary metrics and safety margins to provide a comprehensive output profile."
         )
         mistakes = (
-            "Common mistakes include mixing units, ignoring limits/caps, skipping losses/inefficiencies, "
-            "and missing edge cases. This tool surfaces these considerations explicitly."
+            "Common pitfalls include using inconsistent units (e.g., mixing metric and imperial), "
+            "ignoring local environmental or economic factors that might influence the baseline, "
+            "and relying on estimates rather than precise measurements. "
+            "Always verify your input data for the highest accuracy."
         )
         article = [
-            {"heading": f"Why use {data['title']}?", "body": why},
-            {"heading": "How the calculation works", "body": how},
-            {"heading": "Common mistakes in this niche", "body": mistakes},
+            {"heading": f"Why Use the {data['title']}?", "body": why},
+            {"heading": "How It Works: The Logic", "body": how},
+            {"heading": "Best Practices & Common Mistakes", "body": mistakes},
+            {"heading": "Next Steps", "body": "Use the results from this tool to inform your strategy. Consider saving this page or exporting your results for future reference."}
         ]
     data["article"] = article
     related = data.get("related", [])

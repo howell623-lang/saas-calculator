@@ -203,11 +203,23 @@ export function DynamicCalculator({ config }: Props) {
           <div className="mt-6 space-y-3 rounded-2xl bg-blue-50/50 p-5 ring-1 ring-blue-100">
             <h4 className="text-sm font-bold text-blue-900 uppercase tracking-widest">Calculation Steps</h4>
             <ol className="list-inside list-decimal space-y-2">
-              {config.calculationSteps.map((step, i) => (
-                <li key={i} className="text-sm text-blue-800 leading-relaxed">
-                  {step}
-                </li>
-              ))}
+              {config.calculationSteps.map((step, i) => {
+                let text = step;
+                config.inputs.forEach((input) => {
+                  text = text.replace(new RegExp(`\\{\\{inputs\\.${input.id}\\}\\}`, "g"), formValues[input.id] || "0");
+                });
+                if (result) {
+                  Object.entries(result).forEach(([key, val]) => {
+                    const strVal = typeof val === "number" && !Number.isInteger(val) ? val.toFixed(2) : String(val);
+                    text = text.replace(new RegExp(`\\{\\{result\\.${key}\\}\\}`, "g"), strVal);
+                  });
+                }
+                return (
+                  <li key={i} className="text-sm text-blue-800 leading-relaxed">
+                    {text}
+                  </li>
+                );
+              })}
             </ol>
             <p className="text-[10px] text-blue-400 mt-4 italic">
               Note: This logic is verified for accuracy based on industry-standard formulas.

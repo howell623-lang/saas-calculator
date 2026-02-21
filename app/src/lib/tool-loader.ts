@@ -10,11 +10,17 @@ const isString = (value: unknown): value is string =>
 const isInputField = (value: unknown): value is InputField => {
   if (!value || typeof value !== "object") return false;
   const candidate = value as Record<string, unknown>;
-  return (
-    isString(candidate.id) &&
-    isString(candidate.label) &&
-    (candidate.type === "number" || candidate.type === "text")
-  );
+  const isValidType =
+    candidate.type === "number" ||
+    candidate.type === "text" ||
+    candidate.type === "select";
+
+  const hasValidOptionsIfSelect =
+    candidate.type === "select"
+      ? Array.isArray(candidate.options) && candidate.options.every(isString)
+      : true;
+
+  return isString(candidate.id) && isString(candidate.label) && isValidType && hasValidOptionsIfSelect;
 };
 
 const isOutputField = (value: unknown): value is OutputField => {
