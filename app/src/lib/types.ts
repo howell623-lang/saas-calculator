@@ -31,13 +31,32 @@ export type ArticleSection = {
 };
 
 export type ChartConfig = {
-  type: "pie" | "bar";
+  type: "pie" | "bar" | "line";
   title?: string;
   data: {
-    key: string; // The output ID from ToolResult
+    key: string; 
     label: string;
     color: string;
   }[];
+  benchmarks?: {
+    value: number;
+    label: string;
+    color: string;
+  }[];
+};
+
+export type DiagnosticRule = {
+  condition: string;
+  message: string;
+  type?: "warning" | "success" | "info";
+};
+
+export type GlossaryEntry = {
+  term: string;
+  definition: string;
+  category: string;
+  source?: string;
+  relatedSlug?: string;
 };
 
 export type ToolConfig = {
@@ -45,6 +64,14 @@ export type ToolConfig = {
   title: string;
   seo: SEOConfig;
   summary?: string;
+  isPremium?: boolean;
+  author?: {
+    name: string;
+    role: string;
+    avatar?: string;
+  };
+  aiContext?: string; 
+  diagnostics?: DiagnosticRule[]; 
   inputs: InputField[];
   outputs: OutputField[];
   formula: string;
@@ -55,6 +82,15 @@ export type ToolConfig = {
   article?: ArticleSection[];
   calculationSteps?: string[];
   chart?: ChartConfig;
+  sources?: {
+    name: string;
+    url?: string;
+  }[];
+  reviewer?: {
+    name: string;
+    role: string;
+    verificationDate: string;
+  };
   updatedAt?: string;
 };
 

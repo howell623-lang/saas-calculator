@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { INSIGHTS, Article } from "../page";
+import { INSIGHTS, Article } from "@/lib/insights-data";
 
 type PageProps = {
   params: Promise<{ slug: string }>;

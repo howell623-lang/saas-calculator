@@ -3,6 +3,8 @@ import { Geist, Geist_Mono } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
 import { Providers } from "@/components/providers";
+import { CommandCenter } from "@/components/search/CommandCenter";
+import { loadAllToolConfigs } from "@/lib/tool-loader";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -62,6 +64,7 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const tools = loadAllToolConfigs();
   return (
     <html lang="en">
       <head>
@@ -91,9 +94,13 @@ export default function RootLayout({
         />
       </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased selection:bg-indigo-500/30`}
       >
-        <Providers>{children}</Providers>
+        <div className="grain-overlay" />
+        <Providers>
+          <CommandCenter tools={tools} />
+          {children}
+        </Providers>
       </body>
     </html>
   );
